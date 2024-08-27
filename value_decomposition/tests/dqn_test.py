@@ -1,19 +1,19 @@
 import gymnasium as gym
 
-from value_decomposition.dqn.agent import DqnAgent
+from value_decomposition.dqn.dqn_agent import DqnAgent
 
 
 def main(env_name, num_episodes, max_steps_per_episode, discrete=True, visualize=False):
-    env = gym.make(env_name)
+    env = gym.make(env_name, render_mode="rgb_array")
 
     input_size = env.observation_space.shape[0]
     output_size = env.action_space.n if discrete else env.action_space.shape[0]
 
     agent = DqnAgent(
-        input_size=input_size,
-        gru_input_size=64,
-        gru_output_size=32,
-        output_size=output_size,
+        state_dim=input_size,
+        hidden_dim=64,
+        hidden_output_dim=32,
+        n_actions=output_size,
         learning_rate=0.001,
         epsilon=0.1,
         gamma=0.99,
@@ -29,11 +29,7 @@ def main(env_name, num_episodes, max_steps_per_episode, discrete=True, visualize
 
         for step in range(max_steps_per_episode):
 
-            action = agent.select_action(state)
-
-            next_state, reward, done, _, _ = env.step(action)
-
-            agent.add_to_buffer((state, action, reward, next_state, done))
+            next_state, reward, done = agent.step(env=env, state=state)
 
             agent.update()
 
@@ -50,4 +46,4 @@ def main(env_name, num_episodes, max_steps_per_episode, discrete=True, visualize
 
 if __name__ == "__main__":
     # Example usage
-    main('CartPole-v1', num_episodes=100, max_steps_per_episode=500)
+    main('CartPole-v1', num_episodes=100, max_steps_per_episode=500, visualize=True)

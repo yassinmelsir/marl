@@ -1,22 +1,22 @@
 import torch.nn as nn
 
 
-class DqnNetwork(nn.Module):
-    def __init__(self, input_size, gru_input_size, gru_output_size, output_size):
+class DeepQNetwork(nn.Module):
+    def __init__(self, state_dim, hidden_dim, hidden_output_dim, n_actions):
         super().__init__()
         self.mlp_bottom = nn.Sequential(
-            nn.Linear(input_size, gru_input_size),
+            nn.Linear(state_dim, hidden_dim),
             nn.ReLU()
         )
         self.gru = nn.GRU(
-            gru_input_size,
-            gru_output_size,
+            hidden_dim,
+            hidden_output_dim,
             batch_first=True
         )
         self.mlp_top = nn.Sequential(
-            nn.Linear(gru_output_size, gru_input_size),
+            nn.Linear(hidden_output_dim, hidden_dim),
             nn.ReLU(),
-            nn.Linear(gru_input_size, output_size)
+            nn.Linear(hidden_dim, n_actions)
         )
 
     def forward(self, x, hidden=None):
@@ -26,7 +26,6 @@ class DqnNetwork(nn.Module):
         x = x.squeeze(1)
         x = self.mlp_top(x)
         return x, hidden
-
 
 
 
