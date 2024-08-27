@@ -9,6 +9,10 @@ def main(num_episodes, max_steps_per_episode, visualize=False):
     env = simple_spread_v3.env(N=3, local_ratio=0.5, max_cycles=max_steps_per_episode)
     env.reset()
 
+    print(f"Environment agents: {env.agents}")
+    print(f"Environment observation spaces: {env.observation_spaces}")
+    print(f"Environment action spaces: {env.action_spaces}")
+
     first_agent = env.agents[0]
     observation_space = env.observation_space(first_agent)
     action_space = env.action_space(first_agent)
@@ -22,6 +26,9 @@ def main(num_episodes, max_steps_per_episode, visualize=False):
         output_size = action_space.n
     else:
         raise ValueError(f"Unexpected action space type: {type(action_space)}")
+
+    print(f"Input size: {input_size}")
+    print(f"Output size: {output_size}")
 
     agent = QmAgent(
         n_agents=len(env.agents),
@@ -44,7 +51,6 @@ def main(num_episodes, max_steps_per_episode, visualize=False):
         step = 0
 
         while step < max_steps_per_episode:
-
             rewards, dones = agent.step(env=env)
 
             loss = agent.update()

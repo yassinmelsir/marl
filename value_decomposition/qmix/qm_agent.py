@@ -100,6 +100,7 @@ class QmAgent:
         for agent_id in env.agent_iter():
             observation, reward, termination, truncation, info = env.last()
 
+            # Convert scalar observations to 1D numpy arrays
             if np.isscalar(observation):
                 observation = np.array([observation])
 
@@ -116,24 +117,36 @@ class QmAgent:
             env.step(action)
 
             next_observation = env.observe(agent_id)[0]
+            # Convert scalar next_observation to 1D numpy array
             if np.isscalar(next_observation):
                 next_observation = np.array([next_observation])
             next_states.append(next_observation)
 
+        # Ensure all states and next_states are 1D arrays
         states = [np.atleast_1d(state) for state in states]
         next_states = [np.atleast_1d(state) for state in next_states]
 
-        global_state = np.concatenate(states)
-        next_global_state = np.concatenate(next_states)
+        if not states:
+            print("Warning: No states were collected during this step.")
+            return rewards, dones
 
-        self.add_to_buffer((
-            states,
-            actions,
-            rewards,
-            next_states,
-            dones,
-            global_state,
-            next_global_state
-        ))
+        try:
+            global_state = np.concatenate(states)
+            next_global_state = np.concatenate(next_states)
+
+            self.add_to_buffer((
+                states,
+                actions,
+                rewards,
+                next_states,
+                dones,
+                global_state,
+                next_global_state
+            ))
+        except ValueError as e:
+            print(f"Error during concatenation: {e}")
+            print(f"States: {states}")
+            print(f"Next States: {next_states}")
+            raise
 
         return rewards, dones
