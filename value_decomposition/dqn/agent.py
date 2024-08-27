@@ -1,8 +1,8 @@
 import numpy as np
 import torch
 from torch import optim, nn
+from torchrl.data import ReplayBuffer, ListStorage
 
-from general.replay_buffer import ReplayBuffer
 from value_decomposition.dqn.network import DqnNetwork
 
 
@@ -16,7 +16,7 @@ class DqnAgent:
         self.target_network = DqnNetwork(input_size, gru_input_size, gru_output_size, output_size)
         self.target_network.load_state_dict(self.q_network.state_dict())
         self.optimizer = optim.Adam(self.q_network.parameters(), lr=learning_rate)
-        self.replay_buffer = ReplayBuffer(buffer_capacity)
+        self.replay_buffer = ReplayBuffer(batch_size=buffer_capacity, storage=ListStorage(max_size=buffer_capacity))
         self.epsilon = epsilon
         self.gamma = gamma
         self.input_size = input_size
@@ -48,15 +48,7 @@ class DqnAgent:
         if len(self.replay_buffer) < self.batch_size:
             return
 
-        batch = self.replay_buffer.sample(self.batch_size)
-
-        try:
-            states, actions, rewards, next_states, dones = zip(*batch)
-        except Exception as e:
-            raise f"Unpacking error: {e}"
-
-        states, actions, rewards, next_states, dones = \
-            self.batch_to_tensor(states, actions, rewards, next_states, dones)
+        states, actions, rewards, next_states, dones = self.get_batch()
 
         q_values, _ = self.q_network(states)
         next_q_values, _ = self.target_network(next_states)
@@ -72,7 +64,8 @@ class DqnAgent:
 
         self.optimizer.step()
 
-    def batch_to_tensor(self, states, actions, rewards, next_states, dones):
+    def get_batch(self):
+        states, actions, rewards, next_states, dones = self.replay_buffer.sample()
 
         states = np.array(states)
         states = torch.FloatTensor(states)
@@ -90,3 +83,6 @@ class DqnAgent:
         dones = torch.FloatTensor(dones)
 
         return states, actions, rewards, next_states, dones
+
+    def add_to_buffer(self, data):
+        self.replay_buffer.add(data)

@@ -33,7 +33,7 @@ def main(env_name, num_episodes, max_steps_per_episode, discrete=True):
 
             next_state, reward, done, _, _ = env.step(action)
 
-            agent.replay_buffer.push((state, action, reward, next_state, done))
+            agent.add_to_buffer((state, action, reward, next_state, done))
 
             agent.update()
 
