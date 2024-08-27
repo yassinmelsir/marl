@@ -1,11 +1,9 @@
 import gymnasium as gym
-import numpy as np
-import torch
 
 from value_decomposition.dqn.agent import DqnAgent
 
 
-def main(env_name, num_episodes, max_steps_per_episode, discrete=True):
+def main(env_name, num_episodes, max_steps_per_episode, discrete=True, visualize=False):
     env = gym.make(env_name)
 
     input_size = env.observation_space.shape[0]
@@ -26,6 +24,8 @@ def main(env_name, num_episodes, max_steps_per_episode, discrete=True):
     for episode in range(num_episodes):
         state, info = env.reset(seed=42)
         total_reward = 0
+        if visualize:
+            env.render()
 
         for step in range(max_steps_per_episode):
 

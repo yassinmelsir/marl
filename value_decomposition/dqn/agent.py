@@ -3,7 +3,7 @@ import torch
 from torch import optim, nn
 from torchrl.data import ReplayBuffer, ListStorage
 
-from value_decomposition.dqn.network import DqnNetwork
+from value_decomposition.dqn.dqn import DqnNetwork
 
 
 class DqnAgent:
@@ -44,7 +44,7 @@ class DqnAgent:
                 q_values, _ = self.q_network(state)
                 return q_values.argmax().item()
 
-    def update(self):
+    def update(self, qmix=False):
         if len(self.replay_buffer) < self.batch_size:
             return
 
@@ -57,7 +57,10 @@ class DqnAgent:
         next_q_value = next_q_values.max(1)[0]
         expected_q_value = rewards + self.gamma * next_q_value * (1 - dones)
 
-        loss = nn.MSELoss()(q_value, expected_q_value.detach())
+        if qmix:
+            loss = None
+        else:
+            loss = nn.MSELoss()(q_value, expected_q_value.detach())
 
         self.optimizer.zero_grad()
         loss.backward()
