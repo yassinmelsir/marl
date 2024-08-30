@@ -1,5 +1,4 @@
-import random, torch
-
+import torch
 import numpy as np
 import torch.nn as nn
 import torch.nn.functional as F
@@ -12,7 +11,7 @@ from value_decomposition.qmix.q_mixing_network import QMixingNetwork
 class QmAgent:
     def __init__(self, n_agents, embed_dim, mixing_state_dim,
                  q_agent_state_dim, hidden_dim, hidden_output_dim, n_actions,
-                 learning_rate, epsilon, gamma, buffer_capacity, batch_size):
+                 learning_rate, epsilon, gamma, buffer_capacity, batch_size, update_frequency):
 
         self.q_mixing_network = QMixingNetwork(
             n_agents=n_agents,
@@ -32,23 +31,35 @@ class QmAgent:
         params = list(self.agents.parameters()) + list(self.q_mixing_network.parameters())
         self.optimizer = torch.optim.Adam(params=params, lr=learning_rate)
 
-        self.replay_buffer = ReplayBuffer(batch_size=buffer_capacity, storage=ListStorage(max_size=buffer_capacity))
+        self.replay_buffer = ReplayBuffer(batch_size=batch_size, storage=ListStorage(max_size=buffer_capacity))
         self.batch_size = batch_size
         self.epsilon = epsilon
         self.gamma = gamma
         self.n_actions = n_actions
         self.q_agent_state_dim = q_agent_state_dim
         self.n_agents = n_agents
+        self.update_frequency = update_frequency
 
     def select_action(self, state, agent_id):
+        print(f"Selecting action for agent {agent_id}")
+        print(f"State shape: {state.shape}")
+        print(f"Epsilon: {self.epsilon}")
+
         if torch.rand(1).item() < self.epsilon:
-            return torch.randint(0, self.n_actions, (1,)).item()
+            action = torch.randint(0, self.n_actions, (1,)).item()
+            print(f"Random action selected: {action}")
+            return action
         else:
             with torch.no_grad():
                 q_values, _ = self.agents[agent_id](state.unsqueeze(0))
-                return q_values.argmax().item()
+                action = q_values.argmax().item()
+                print(f"Q-values: {q_values}")
+                print(f"Action selected: {action}")
+                return action
 
     def update(self):
+        len_replay_buffer = len(self.replay_buffer)
+        print(f"update. len(replay_buffer): {len_replay_buffer}. Batch Size: {self.batch_size}")
         if len(self.replay_buffer) < self.batch_size:
             return None
 
@@ -92,16 +103,15 @@ class QmAgent:
     def add_to_buffer(self, data):
         self.replay_buffer.add(data)
 
-    def step(self, env):
+    def step(self, env, step_number):
         states = []
         actions = []
         rewards = []
         next_states = []
         dones = []
 
-        for agent_id in env.agent_iter():
+        for agent_id in env.agents:
             state, reward, termination, truncation, info = env.last()
-
             if np.isscalar(state):
                 state = np.array([state])
 
@@ -127,8 +137,10 @@ class QmAgent:
         next_states = [np.atleast_1d(state) for state in next_states]
 
         if not states:
-            print("Warning: No states were collected during this step.")
+            print(f"Warning: No states were collected during this step. Step number: {step_number}")
             return rewards, dones
+        else:
+            print(f"States were collected during this step. Step number: {step_number}")
 
         try:
             global_state = np.concatenate(states)

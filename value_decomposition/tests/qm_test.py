@@ -1,11 +1,6 @@
 import gymnasium as gym
-import torch
 from pettingzoo.mpe import simple_spread_v3
 from value_decomposition.qmix.qm_agent import QmAgent
-import numpy as np
-
-def ge
-
 
 def main(num_episodes, max_steps_per_episode, visualize=False):
     env = simple_spread_v3.env(N=3, local_ratio=0.5, max_cycles=max_steps_per_episode)
@@ -44,7 +39,8 @@ def main(num_episodes, max_steps_per_episode, visualize=False):
         epsilon=0.1,
         gamma=0.99,
         buffer_capacity=10000,
-        batch_size=64
+        batch_size=5,
+        update_frequency=10
     )
 
     for episode in range(num_episodes):
@@ -53,7 +49,10 @@ def main(num_episodes, max_steps_per_episode, visualize=False):
         step = 0
 
         while step < max_steps_per_episode:
-            rewards, dones = agent.step(env=env)
+            rewards, dones = agent.step(env=env, step_number=step)
+            print(f"dones: {dones}")
+            print(f"all(dones): {all(dones)}")
+            print(f"step: {step}")
 
             loss = agent.update()
             if loss is not None:
@@ -62,11 +61,9 @@ def main(num_episodes, max_steps_per_episode, visualize=False):
             total_reward += sum(rewards)
             step += 1
 
-            if visualize:
-                env.render()
-
-            if all(dones):
+            if all(dones) and len(dones) != 0:
                 break
+
 
         print(f"Episode {episode + 1}, Total Reward: {total_reward:.2f}")
 
@@ -74,4 +71,4 @@ def main(num_episodes, max_steps_per_episode, visualize=False):
 
 
 if __name__ == "__main__":
-    main(num_episodes=100, max_steps_per_episode=500)
+    main(num_episodes=1, max_steps_per_episode=5)
