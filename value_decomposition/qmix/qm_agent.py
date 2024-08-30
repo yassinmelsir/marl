@@ -41,34 +41,35 @@ class QmAgent:
         self.update_frequency = update_frequency
 
     def select_action(self, state, agent_id):
-        print(f"Selecting action for agent {agent_id}")
-        print(f"State shape: {state.shape}")
-        print(f"Epsilon: {self.epsilon}")
+        # print(f"Selecting action for agent {agent_id}")
+        # print(f"State shape: {state.shape}")
+        # print(f"Epsilon: {self.epsilon}")
 
         if torch.rand(1).item() < self.epsilon:
             action = torch.randint(0, self.n_actions, (1,)).item()
-            print(f"Random action selected: {action}")
+            # print(f"Random action selected: {action}")
             return action
         else:
             with torch.no_grad():
                 q_values, _ = self.agents[agent_id](state.unsqueeze(0))
                 action = q_values.argmax().item()
-                print(f"Q-values: {q_values}")
-                print(f"Action selected: {action}")
+                # print(f"Q-values: {q_values}")
+                # print(f"Action selected: {action}")
                 return action
 
     def update(self):
         len_replay_buffer = len(self.replay_buffer)
-        print(f"update. len(replay_buffer): {len_replay_buffer}. Batch Size: {self.batch_size}")
         if len(self.replay_buffer) < self.batch_size:
             return None
 
+
         states, actions, rewards, next_states, dones, global_states, next_global_states = self.get_batch()
 
-        print(f"states.shape: {states.shape}")
+        print(states[:, 0, :])
 
-        q_values = torch.stack([self.agents[f'agent_{i}'](states[:, i]) for i in range(self.n_agents)], dim=1)
-        chosen_q_values = q_values.gather(2, actions.unsqueeze(-1)).squeeze(-1)
+        print(states[:, 0, :].shape)
+
+        chosen_q_values = torch.stack([self.agents[f'agent_{i}'](states[:, i, :])[0] for i in range(self.n_agents)], dim=1)
 
         joint_q_values = self.q_mixing_network(chosen_q_values, global_states)
 
@@ -88,16 +89,16 @@ class QmAgent:
 
     def get_batch(self):
         batch = self.replay_buffer.sample()
-        print(batch)
+
         states, actions, rewards, next_states, dones, global_states, next_global_states = batch
 
-        states = torch.FloatTensor(states).view(self.batch_size, self.n_agents, -1)
-        next_states = torch.FloatTensor(next_states).view(self.batch_size, self.n_agents, -1)
-        actions = torch.LongTensor(actions).view(self.batch_size, self.n_agents)
-        rewards = torch.FloatTensor(rewards).view(self.batch_size, self.n_agents)
-        dones = torch.FloatTensor(dones).view(self.batch_size, 1)
-        global_states = torch.FloatTensor(global_states).view(self.batch_size, -1)
-        next_global_states = torch.FloatTensor(next_global_states).view(self.batch_size, -1)
+        print(global_states)
+
+        states = torch.stack(states)
+        actions = torch.stack(actions)
+        rewards = torch.stack(rewards)
+        next_states = torch.stack(next_states)
+        dones = torch.stack(dones)
 
         return states, actions, rewards, next_states, dones, global_states, next_global_states
 
