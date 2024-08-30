@@ -54,6 +54,8 @@ class QmAgent:
 
         states, actions, rewards, next_states, dones, global_states, next_global_states = self.get_batch()
 
+        print(f"states.shape: {states.shape}")
+
         q_values = torch.stack([self.agents[f'agent_{i}'](states[:, i]) for i in range(self.n_agents)], dim=1)
         chosen_q_values = q_values.gather(2, actions.unsqueeze(-1)).squeeze(-1)
 
@@ -74,7 +76,7 @@ class QmAgent:
         return loss.item()
 
     def get_batch(self):
-        batch = self.replay_buffer.sample(self.batch_size)
+        batch = self.replay_buffer.sample()
         states, actions, rewards, next_states, dones, global_states, next_global_states = zip(*batch)
 
         states = torch.FloatTensor(states).view(self.batch_size, self.n_agents, -1)
@@ -98,31 +100,29 @@ class QmAgent:
         dones = []
 
         for agent_id in env.agent_iter():
-            observation, reward, termination, truncation, info = env.last()
+            state, reward, termination, truncation, info = env.last()
 
-            # Convert scalar observations to 1D numpy arrays
-            if np.isscalar(observation):
-                observation = np.array([observation])
+            if np.isscalar(state):
+                state = np.array([state])
 
-            states.append(observation)
+            states.append(state)
             rewards.append(reward)
             dones.append(termination or truncation)
 
             if termination or truncation:
                 action = None
             else:
-                action = self.select_action(torch.FloatTensor(observation), agent_id)
+                action = self.select_action(torch.FloatTensor(state), agent_id)
 
             actions.append(action)
+
             env.step(action)
 
-            next_observation = env.observe(agent_id)[0]
-            # Convert scalar next_observation to 1D numpy array
-            if np.isscalar(next_observation):
-                next_observation = np.array([next_observation])
-            next_states.append(next_observation)
+            next_state = env.observe(agent_id)[0]
+            if np.isscalar(next_state):
+                next_state = np.array([next_state])
+            next_states.append(next_state)
 
-        # Ensure all states and next_states are 1D arrays
         states = [np.atleast_1d(state) for state in states]
         next_states = [np.atleast_1d(state) for state in next_states]
 

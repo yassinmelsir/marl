@@ -4,14 +4,16 @@ from pettingzoo.mpe import simple_spread_v3
 from value_decomposition.qmix.qm_agent import QmAgent
 import numpy as np
 
+def ge
+
 
 def main(num_episodes, max_steps_per_episode, visualize=False):
     env = simple_spread_v3.env(N=3, local_ratio=0.5, max_cycles=max_steps_per_episode)
     env.reset()
 
     print(f"Environment agents: {env.agents}")
-    print(f"Environment observation spaces: {env.observation_spaces}")
-    print(f"Environment action spaces: {env.action_spaces}")
+    print(f"Environment observation spaces: {env.observation_space}")
+    print(f"Environment action spaces: {env.action_space}")
 
     first_agent = env.agents[0]
     observation_space = env.observation_space(first_agent)
