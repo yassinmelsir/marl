@@ -88,7 +88,8 @@ class QmAgent:
 
     def get_batch(self):
         batch = self.replay_buffer.sample()
-        states, actions, rewards, next_states, dones, global_states, next_global_states = zip(*batch)
+        print(batch)
+        states, actions, rewards, next_states, dones, global_states, next_global_states = batch
 
         states = torch.FloatTensor(states).view(self.batch_size, self.n_agents, -1)
         next_states = torch.FloatTensor(next_states).view(self.batch_size, self.n_agents, -1)
