@@ -50,11 +50,14 @@ def main(num_episodes, max_steps_per_episode, visualize=False):
         step = 0
 
         while step < max_steps_per_episode:
-            rewards, dones = agent.step(env=env)
+            rewards, dones = agent.step(env=env, step=step)
 
             loss = agent.update()
-            if loss is not None:
-                print(f"Episode {episode + 1}, Step {step + 1}, Loss: {loss:.4f}")
+            # if loss is not None:
+            #     print(f"Episode {episode + 1}, Step {step + 1}, Loss: {loss:.4f}")
+            # else:
+            #     print(f"Episode {episode + 1}, Step {step + 1}")
+
 
             total_reward += sum(rewards)
             step += 1
@@ -69,4 +72,4 @@ def main(num_episodes, max_steps_per_episode, visualize=False):
 
 
 if __name__ == "__main__":
-    main(num_episodes=1, max_steps_per_episode=5)
+    main(num_episodes=50, max_steps_per_episode=100)
