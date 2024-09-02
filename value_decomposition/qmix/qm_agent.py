@@ -83,26 +83,29 @@ class QmAgent:
         state_batch = state_batch.reshape(1,-1)
         next_state_batch = next_state_batch.reshape(1,-1)
 
-        joint_q_values = self.mixing_network(q_values_batch, state_batch)
-        target_q_values = self.mixing_network(next_q_values_batch, next_state_batch)
+        global_q_value = self.mixing_network(q_values_batch, state_batch)
+        next_global_q_value = self.mixing_network(next_q_values_batch, next_state_batch)
 
-        if joint_q_values.shape != target_q_values.shape:
+        if global_q_value.shape != next_global_q_value.shape:
             raise "joint_q_values.shape != target_q_values.shape"
 
 
+
+        print(f"global_q_value Shape: {global_q_value.shape}")
+        print(f"next_global_q_value Shape: {next_global_q_value.shape}")
+
         with torch.no_grad():
-            dones = torch.tensor(dones_batch).clone().detach().float()
-            rewards = torch.tensor(rewards_batch).clone().detach().float()
-            targets = rewards + (1 - dones) * self.gamma * target_q_values
+            rewards_sum_batch = rewards_batch.sum(dim=1, keepdim=True)
+            dones_sum_batch = dones_batch.sum(dim=1, keepdim=True)
 
-        loss = F.mse_loss(joint_q_values, targets)
+            print(f"rewards_sum_batch Shape: {rewards_sum_batch.shape}")
+            print(f"rewards_sum_batch Shape: {rewards_sum_batch.shape}")
 
-        print(f"Rewards: {rewards}. Shape: {rewards.shape}")
-        print(f"Dones: {dones}. Shape: {dones.shape}")
+            y_tot = rewards_sum_batch + self.gamma * (1 - dones_sum_batch) * next_global_q_value
 
-        print(f"Shape: {joint_q_values.shape}")
-        print(f"Shape: {target_q_values.shape}")
-        print(f"Shape: {targets.shape}")
+        loss = F.mse_loss(y_tot, global_q_value)
+
+        print(f"y_tot Shape: {y_tot.shape}")
 
 
         self.optimizer.zero_grad()
