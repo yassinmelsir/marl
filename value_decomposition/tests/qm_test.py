@@ -36,12 +36,11 @@ def main(num_episodes, max_steps_per_episode, visualize=False):
         hidden_dim=64,
         hidden_output_dim=32,
         n_actions=output_size,
-        learning_rate=0.001,
+        learning_rate=0.00001,
         epsilon=0.1,
         gamma=0.99,
         buffer_capacity=10000,
         batch_size=5,
-        update_frequency=10
     )
 
     for episode in range(num_episodes):
@@ -53,14 +52,15 @@ def main(num_episodes, max_steps_per_episode, visualize=False):
             rewards, dones = agent.step(env=env, step=step)
 
             loss = agent.update()
-            # if loss is not None:
-            #     print(f"Episode {episode + 1}, Step {step + 1}, Loss: {loss:.4f}")
-            # else:
-            #     print(f"Episode {episode + 1}, Step {step + 1}")
-
 
             total_reward += sum(rewards)
             step += 1
+
+
+            if loss is not None:
+                print(f"Episode {episode + 1}, Step {step + 1}, Total Reward: {total_reward}, Loss: {loss:.4f}")
+            else:
+                print(f"Episode {episode + 1}, Step {step + 1}, Total Reward: {total_reward}")
 
             if all(dones) and len(dones) != 0:
                 break
@@ -72,4 +72,4 @@ def main(num_episodes, max_steps_per_episode, visualize=False):
 
 
 if __name__ == "__main__":
-    main(num_episodes=1, max_steps_per_episode=5)
+    main(num_episodes=10, max_steps_per_episode=50)

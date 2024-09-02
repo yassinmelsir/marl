@@ -11,7 +11,7 @@ from value_decomposition.qmix.mixing_network import MixingNetwork
 class QmAgent:
     def __init__(self, n_agents, embed_dim, mixing_state_dim,
                  q_agent_state_dim, hidden_dim, hidden_output_dim, n_actions,
-                 learning_rate, epsilon, gamma, buffer_capacity, batch_size, update_frequency):
+                 learning_rate, epsilon, gamma, buffer_capacity, batch_size):
 
         self.mixing_network = MixingNetwork(
             n_agents=n_agents,
@@ -38,7 +38,6 @@ class QmAgent:
         self.n_actions = n_actions
         self.q_agent_state_dim = q_agent_state_dim
         self.n_agents = n_agents
-        self.update_frequency = update_frequency
 
     def select_action(self, observation, id, random_possible=True):
         if random_possible and torch.rand(1).item() < self.epsilon:
@@ -59,7 +58,7 @@ class QmAgent:
             return None
 
         state_batch, next_state_batch, rewards_batch, dones_batch, step_no = \
-            self.replay_buffer.sample(batch_size=1)
+            self.replay_buffer.sample()
 
         for item in [next_state_batch, rewards_batch, dones_batch, step_no]:
             if len(item) != len(state_batch): raise "Length mismatch in batch!"
@@ -77,11 +76,11 @@ class QmAgent:
             q_values_batch.append(torch.tensor(np.array(q_values, dtype=np.float32)))
             next_q_values_batch.append(torch.tensor(np.array(q_values, dtype=np.float32)))
 
-        q_values_batch = torch.stack(q_values_batch).reshape(1,-1)
-        next_q_values_batch = torch.stack(next_q_values_batch).reshape(1,-1)
+        q_values_batch = torch.stack(q_values_batch).reshape(self.batch_size,-1)
+        next_q_values_batch = torch.stack(next_q_values_batch).reshape(self.batch_size,-1)
 
-        state_batch = state_batch.reshape(1,-1)
-        next_state_batch = next_state_batch.reshape(1,-1)
+        state_batch = state_batch.reshape(self.batch_size,-1)
+        next_state_batch = next_state_batch.reshape(self.batch_size,-1)
 
         global_q_value = self.mixing_network(q_values_batch, state_batch)
         next_global_q_value = self.mixing_network(next_q_values_batch, next_state_batch)
@@ -89,24 +88,12 @@ class QmAgent:
         if global_q_value.shape != next_global_q_value.shape:
             raise "joint_q_values.shape != target_q_values.shape"
 
-
-
-        print(f"global_q_value Shape: {global_q_value.shape}")
-        print(f"next_global_q_value Shape: {next_global_q_value.shape}")
-
         with torch.no_grad():
             rewards_sum_batch = rewards_batch.sum(dim=1, keepdim=True)
             dones_sum_batch = dones_batch.sum(dim=1, keepdim=True)
-
-            print(f"rewards_sum_batch Shape: {rewards_sum_batch.shape}")
-            print(f"rewards_sum_batch Shape: {rewards_sum_batch.shape}")
-
             y_tot = rewards_sum_batch + self.gamma * (1 - dones_sum_batch) * next_global_q_value
 
         loss = F.mse_loss(y_tot, global_q_value)
-
-        print(f"y_tot Shape: {y_tot.shape}")
-
 
         self.optimizer.zero_grad()
         loss.backward()
