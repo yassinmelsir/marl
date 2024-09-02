@@ -7,8 +7,9 @@ def main(num_episodes, max_steps_per_episode, visualize=False):
     env.reset()
 
     print(f"Environment agents: {env.agents}")
-    print(f"Environment observation spaces: {env.observation_space}")
-    print(f"Environment action spaces: {env.action_space}")
+    for agent in env.agents:
+        print(f"Environment observation spaces: {env.observation_space(agent)}")
+        print(f"Environment action spaces: {env.action_space(agent)}")
 
     first_agent = env.agents[0]
     observation_space = env.observation_space(first_agent)
@@ -50,9 +51,6 @@ def main(num_episodes, max_steps_per_episode, visualize=False):
 
         while step < max_steps_per_episode:
             rewards, dones = agent.step(env=env, step_number=step)
-            print(f"dones: {dones}")
-            print(f"all(dones): {all(dones)}")
-            print(f"step: {step}")
 
             loss = agent.update()
             if loss is not None:

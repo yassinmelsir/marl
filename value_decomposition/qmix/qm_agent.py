@@ -3,9 +3,10 @@ import numpy as np
 import torch.nn as nn
 import torch.nn.functional as F
 from torchrl.data import ReplayBuffer, ListStorage
+from _collections import defaultdict
 
 from value_decomposition.dqn.deep_q_network import DeepQNetwork
-from value_decomposition.qmix.q_mixing_network import QMixingNetwork
+from value_decomposition.qmix.mixing_network import MixingNetwork
 
 
 class QmAgent:
@@ -13,7 +14,7 @@ class QmAgent:
                  q_agent_state_dim, hidden_dim, hidden_output_dim, n_actions,
                  learning_rate, epsilon, gamma, buffer_capacity, batch_size, update_frequency):
 
-        self.q_mixing_network = QMixingNetwork(
+        self.q_mixing_network = MixingNetwork(
             n_agents=n_agents,
             state_dim=mixing_state_dim,
             embed_dim=embed_dim
@@ -40,38 +41,37 @@ class QmAgent:
         self.n_agents = n_agents
         self.update_frequency = update_frequency
 
-    def select_action(self, state, agent_id):
-        # print(f"Selecting action for agent {agent_id}")
-        # print(f"State shape: {state.shape}")
-        # print(f"Epsilon: {self.epsilon}")
-
-        if torch.rand(1).item() < self.epsilon:
+    def select_action(self, state, id, random_possible=True):
+        if random_possible and torch.rand(1).item() < self.epsilon:
             action = torch.randint(0, self.n_actions, (1,)).item()
-            # print(f"Random action selected: {action}")
             return action
         else:
             with torch.no_grad():
-                q_values, _ = self.agents[agent_id](state.unsqueeze(0))
-                action = q_values.argmax().item()
-                # print(f"Q-values: {q_values}")
-                # print(f"Action selected: {action}")
+                action_q_values, _ = self.agents[id](state.unsqueeze(0))
+                action = action_q_values.argmax().item()
                 return action
 
-    def update(self):
-        len_replay_buffer = len(self.replay_buffer)
+    def update(self, random_possible=False):
         if len(self.replay_buffer) < self.batch_size:
             return None
 
+        batch = self.replay_buffer.sample(batch_size=self.batch_size)
 
-        states, actions, rewards, next_states, dones, global_states, next_global_states = self.get_batch()
+        q_values_batch = []
+        for step in batch:
+            agent_action_q_values = []
+            for agent in step['agents']:
+                state = agent['state']
+                id = agent['id']
+                selected_action_q_value = self.select_action(state=state, id=id, random_possible=random_possible)
+                agent_action_q_values.append(selected_action_q_value)
+            q_values_batch.append(agent_action_q_values)
 
-        print(states[:, 0, :])
+        state_batch = [state for state in batch['state']]
 
-        print(states[:, 0, :].shape)
+        joint_q_values = self.q_mixing_network(q_values_batch[0], state_batch[0])
 
-        chosen_q_values = torch.stack([self.agents[f'agent_{i}'](states[:, i, :])[0] for i in range(self.n_agents)], dim=1)
 
-        joint_q_values = self.q_mixing_network(chosen_q_values, global_states)
 
         with torch.no_grad():
             next_q_values = torch.stack([self.agents[f'agent_{i}'](next_states[:, i]) for i in range(self.n_agents)], dim=1)
@@ -87,80 +87,38 @@ class QmAgent:
 
         return loss.item()
 
-    def get_batch(self):
-        batch = self.replay_buffer.sample()
-
-        states, actions, rewards, next_states, dones, global_states, next_global_states = batch
-
-        print(global_states)
-
-        states = torch.stack(states)
-        actions = torch.stack(actions)
-        rewards = torch.stack(rewards)
-        next_states = torch.stack(next_states)
-        dones = torch.stack(dones)
-
-        return states, actions, rewards, next_states, dones, global_states, next_global_states
-
     def add_to_buffer(self, data):
         self.replay_buffer.add(data)
 
-    def step(self, env, step_number):
-        states = []
-        actions = []
-        rewards = []
-        next_states = []
-        dones = []
-
+    def step(self, env):
+        step_data = {'agent': [], 'state': [], 'next_state': []}
         for agent_id in env.agents:
-            state, reward, termination, truncation, info = env.last()
-            if np.isscalar(state):
-                state = np.array([state])
+            observation, reward, termination, truncation, info = env.last()
 
-            states.append(state)
-            rewards.append(reward)
-            dones.append(termination or truncation)
+            if np.isscalar(observation):
+                observation = np.array(observation)
 
             if termination or truncation:
                 action = None
             else:
-                action = self.select_action(torch.FloatTensor(state), agent_id)
-
-            actions.append(action)
+                action = self.select_action(state=torch.FloatTensor(observation), id=agent_id)
 
             env.step(action)
 
-            next_state = env.observe(agent_id)[0]
-            if np.isscalar(next_state):
-                next_state = np.array([next_state])
-            next_states.append(next_state)
+            next_observation = env.observe(agent_id)[0]
+            if np.isscalar(next_observation):
+                next_observation = np.array(next_observation)
 
-        states = [np.atleast_1d(state) for state in states]
-        next_states = [np.atleast_1d(state) for state in next_states]
+            step_data['agents'].append({
+                'id': agent_id, 'observation': observation, 'reward': reward, 'done': termination or truncation,
+                'action': action, 'next_observation': next_observation
+            })
 
-        if not states:
-            print(f"Warning: No states were collected during this step. Step number: {step_number}")
-            return rewards, dones
-        else:
-            print(f"States were collected during this step. Step number: {step_number}")
+        self.add_to_buffer(step_data)
 
-        try:
-            global_state = np.concatenate(states)
-            next_global_state = np.concatenate(next_states)
-
-            self.add_to_buffer((
-                states,
-                actions,
-                rewards,
-                next_states,
-                dones,
-                global_state,
-                next_global_state
-            ))
-        except ValueError as e:
-            print(f"Error during concatenation: {e}")
-            print(f"States: {states}")
-            print(f"Next States: {next_states}")
-            raise
+        rewards, dones = [],[]
+        for agent in step_data['agents'].items():
+            rewards.append(agent['reward'])
+            dones.append(agent['dones'])
 
         return rewards, dones

@@ -38,8 +38,8 @@ class DqnAgent:
 
                 state = torch.FloatTensor(state)
 
-                q_values, _ = self.q_network(state)
-                return q_values.argmax().item()
+                action_q_values, _ = self.q_network(state)
+                return action_q_values.argmax().item()
 
     def update(self):
         if len(self.replay_buffer) < self.batch_size:
@@ -47,11 +47,11 @@ class DqnAgent:
 
         states, actions, rewards, next_states, dones = self.get_batch()
 
-        q_values, _ = self.q_network(states)
-        next_q_values, _ = self.target_network(next_states)
+        action_q_values, _ = self.q_network(states)
+        next_action_q_values, _ = self.target_network(next_states)
 
-        q_value = q_values.gather(1, actions.unsqueeze(1)).squeeze(1)
-        next_q_value = next_q_values.max(1)[0]
+        q_value = action_q_values.gather(1, actions.unsqueeze(1)).squeeze(1)
+        next_q_value = next_action_q_values.max(1)[0]
         expected_q_value = rewards + self.gamma * next_q_value * (1 - dones)
 
 
