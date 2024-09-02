@@ -6,11 +6,6 @@ def main(num_episodes, max_steps_per_episode, visualize=False):
     env = simple_spread_v3.env(N=3, local_ratio=0.5, max_cycles=max_steps_per_episode)
     env.reset()
 
-    print(f"Environment agents: {env.agents}")
-    for agent in env.agents:
-        print(f"Environment observation spaces: {env.observation_space(agent)}")
-        print(f"Environment action spaces: {env.action_space(agent)}")
-
     first_agent = env.agents[0]
     observation_space = env.observation_space(first_agent)
     action_space = env.action_space(first_agent)
@@ -25,22 +20,19 @@ def main(num_episodes, max_steps_per_episode, visualize=False):
     else:
         raise ValueError(f"Unexpected action space type: {type(action_space)}")
 
-    print(f"Input size: {input_size}")
-    print(f"Output size: {output_size}")
-
     agent = QmAgent(
         n_agents=len(env.agents),
-        embed_dim=128,
+        embed_dim=256,
         mixing_state_dim=input_size * len(env.agents),
         q_agent_state_dim=input_size,
-        hidden_dim=64,
+        hidden_dim=128,
         hidden_output_dim=32,
         n_actions=output_size,
-        learning_rate=0.00001,
+        learning_rate=0.000001,
         epsilon=0.1,
         gamma=0.99,
         buffer_capacity=10000,
-        batch_size=5,
+        batch_size=20,
     )
 
     for episode in range(num_episodes):
@@ -72,4 +64,4 @@ def main(num_episodes, max_steps_per_episode, visualize=False):
 
 
 if __name__ == "__main__":
-    main(num_episodes=10, max_steps_per_episode=50)
+    main(num_episodes=20, max_steps_per_episode=20)
