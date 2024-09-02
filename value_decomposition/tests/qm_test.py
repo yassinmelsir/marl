@@ -50,7 +50,7 @@ def main(num_episodes, max_steps_per_episode, visualize=False):
         step = 0
 
         while step < max_steps_per_episode:
-            rewards, dones = agent.step(env=env, step_number=step)
+            rewards, dones = agent.step(env=env)
 
             loss = agent.update()
             if loss is not None:
