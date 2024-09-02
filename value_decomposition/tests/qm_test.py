@@ -72,4 +72,4 @@ def main(num_episodes, max_steps_per_episode, visualize=False):
 
 
 if __name__ == "__main__":
-    main(num_episodes=50, max_steps_per_episode=100)
+    main(num_episodes=1, max_steps_per_episode=5)

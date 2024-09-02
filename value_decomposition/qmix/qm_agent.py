@@ -86,12 +86,24 @@ class QmAgent:
         joint_q_values = self.mixing_network(q_values_batch, state_batch)
         target_q_values = self.mixing_network(next_q_values_batch, next_state_batch)
 
+        if joint_q_values.shape != target_q_values.shape:
+            raise "joint_q_values.shape != target_q_values.shape"
+
+
         with torch.no_grad():
-            dones = torch.tensor(dones_batch, dtype=torch.float32)
-            rewards = torch.tensor(rewards_batch, dtype=torch.float32)
+            dones = torch.tensor(dones_batch).clone().detach().float()
+            rewards = torch.tensor(rewards_batch).clone().detach().float()
             targets = rewards + (1 - dones) * self.gamma * target_q_values
 
         loss = F.mse_loss(joint_q_values, targets)
+
+        print(f"Rewards: {rewards}. Shape: {rewards.shape}")
+        print(f"Dones: {dones}. Shape: {dones.shape}")
+
+        print(f"Shape: {joint_q_values.shape}")
+        print(f"Shape: {target_q_values.shape}")
+        print(f"Shape: {targets.shape}")
+
 
         self.optimizer.zero_grad()
         loss.backward()
@@ -120,8 +132,8 @@ class QmAgent:
             next_observation = env.observe(agent_id)
             state.append(np.array(observation, dtype=np.float32))
             next_state.append(np.array(next_observation, dtype=np.float32))
-            rewards.append(reward)
-            dones.append(termination or truncation)
+            rewards.append(np.array(reward, dtype=np.float32))
+            dones.append(np.array(termination or truncation, dtype=np.float32))
 
         for item in [state, next_state, rewards, dones]:
             if len(item) != len(state): raise "Item mismatch in step data!"
