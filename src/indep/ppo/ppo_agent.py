@@ -30,10 +30,10 @@ class PpoAgent:
             discounted_reward = reward + (self.gamma * discounted_reward)
             rewards.insert(0, discounted_reward)
 
-        rewards = torch.stack([torch.FloatTensor(row) for row in memory.rewards])
+        rewards = torch.tensor(rewards, dtype=torch.float32).unsqueeze(1)
         old_observations = torch.stack([torch.FloatTensor(row) for row in memory.observations])
-        old_actions = torch.stack([torch.IntTensor(row) for row in memory.actions])
-        old_log_probs = torch.stack([torch.FloatTensor(row) for row in memory.log_probs])
+        old_actions = torch.tensor(memory.actions, dtype=torch.long)
+        old_log_probs = torch.tensor(memory.log_probs, dtype=torch.float32)
 
         for _ in range(self.K_epochs):
             log_probs, observation_values = self.actor_critic(old_observations)
@@ -41,12 +41,12 @@ class PpoAgent:
             new_log_probs = dist.log_prob(old_actions)
 
             ratios = torch.exp(new_log_probs - old_log_probs)
-            advantages = rewards - observation_values.detach().squeeze()
+            advantages = rewards - observation_values
 
             surr1 = ratios * advantages
             surr2 = torch.clamp(ratios, 1 - self.eps_clip, 1 + self.eps_clip) * advantages
 
-            loss = -torch.min(surr1, surr2) + 0.5 * F.mse_loss(observation_values.squeeze(), rewards)
+            loss = -torch.min(surr1, surr2) + 0.5 * F.mse_loss(observation_values, rewards)
 
             self.optimizer.zero_grad()
             loss.mean().backward()
