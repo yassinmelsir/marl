@@ -1,0 +1,56 @@
+import torch
+
+from src.indep.ppo.memory import Memory
+from src.indep.ppo.ppo_agent import PpoAgent
+
+
+class IPpoAgent:
+    def __init__(self, n_agents, obs_dim, action_dim, lr, gamma, eps_clip, K_epochs):
+        self.ppo_agents = []
+        self.memories = []
+
+        for _ in range(n_agents):
+            ppo_agent = PpoAgent(
+                obs_dim=obs_dim,
+                action_dim=action_dim,
+                lr=lr,
+                gamma=gamma,
+                eps_clip=eps_clip,
+                K_epochs=K_epochs
+            )
+            self.ppo_agents.append(ppo_agent)
+            self.memories.append(Memory())
+
+    def step(self, env):
+        for i, agent_id in enumerate(env.agents):
+            observation, reward, termination, truncation, _ = env.last()
+            obs_tensor = torch.FloatTensor(observation).unsqueeze(0)
+
+            if termination or truncation:
+                action, log_prob = None, None
+            else:
+                action, log_prob = self.ppo_agents[i].select_action(obs_tensor)
+                log_prob = log_prob.squeeze()
+
+            env.step(action)
+
+            if action is not None:
+                action = torch.IntTensor([action]).squeeze()
+
+            self.memories[i].log_probs.append(log_prob)
+            self.memories[i].actions.append(action)
+
+            self.memories[i].observations.append(obs_tensor.squeeze())
+            self.memories[i].rewards.append(torch.FloatTensor([reward]).squeeze())
+            self.memories[i].dones.append(torch.BoolTensor([termination or truncation]).squeeze())
+
+        return [row.dones[-1] for row in self.memories]
+
+    def update(self):
+        for idx, agent in enumerate(self.ppo_agents):
+            agent.update(self.memories[idx])
+            self.memories[idx].clear_memory()
+
+    def get_memories(self):
+        return self.memories
+

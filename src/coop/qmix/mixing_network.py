@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from value_decomposition.qmix.hyper_network import Hypernetwork
+from src.coop.qmix.hyper_network import Hypernetwork
 
 
 class MixingNetwork(nn.Module):

@@ -4,8 +4,8 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torchrl.data import ReplayBuffer, ListStorage
 
-from value_decomposition.dqn.deep_q_network import DeepQNetwork
-from value_decomposition.qmix.mixing_network import MixingNetwork
+from src.indep.dqn.deep_q_network import DeepQNetwork
+from src.coop.qmix.mixing_network import MixingNetwork
 
 
 class QmAgent:
@@ -101,12 +101,12 @@ class QmAgent:
 
         return loss.item()
 
-    def step(self, env, step, name_string="agent_"):
+    def step(self, env, step):
         state = []
         next_state = []
         rewards = []
         dones = []
-        for agent_id in env.agents:
+        for idx, agent_id in enumerate(env.agents):
             observation, reward, termination, truncation, info = env.last()
 
             if np.isscalar(observation):
@@ -115,10 +115,10 @@ class QmAgent:
             if termination or truncation:
                 action = None
             else:
-                id = agent_id.replace(name_string, "")
-                action = self.select_action(observation=torch.FloatTensor(observation), id=id)
+                action = self.select_action(observation=torch.FloatTensor(observation), id=idx)
 
             env.step(action)
+
             next_observation = env.observe(agent_id)
             state.append(np.array(observation, dtype=np.float32))
             next_state.append(np.array(next_observation, dtype=np.float32))
