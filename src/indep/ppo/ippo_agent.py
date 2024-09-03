@@ -8,7 +8,6 @@ class IppoAgent:
     def __init__(self, n_agents, obs_dim, action_dim, lr, gamma, eps_clip, K_epochs):
         self.ppo_agents = []
         self.memories = []
-
         for _ in range(n_agents):
             ppo_agent = PpoAgent(
                 obs_dim=obs_dim,
