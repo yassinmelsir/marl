@@ -13,16 +13,17 @@ class IppoAgent:
         for _ in range(n_agents):
             actor = Actor(obs_dim=obs_dim, action_dim=action_dim, hidden_dim=hidden_dim)
             critic = Critic(obs_dim=obs_dim, hidden_dim=hidden_dim)
+            memory = Memory()
             ppo_agent = PpoAgent(
                 actor=actor,
                 critic=critic,
+                memory=memory,
                 lr=lr,
                 gamma=gamma,
                 eps_clip=eps_clip,
                 K_epochs=K_epochs
             )
             self.ppo_agents.append(ppo_agent)
-            self.memories.append(Memory())
 
     def step(self, env):
         for i, agent_id in enumerate(env.agents):

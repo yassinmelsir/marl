@@ -1,6 +1,6 @@
 import gymnasium as gym
 
-from src.indep.dqn.dqn_agent import DqnAgent
+from src.dql.agents.dqn_agent import DqnAgent
 
 
 def main(env_name, num_episodes, max_steps_per_episode, discrete=True, visualize=False):
