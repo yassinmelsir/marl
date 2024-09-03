@@ -12,6 +12,7 @@ def get_obs_action_size(env):
         raise ValueError(f"Unexpected observation space type: {type(observation_space)}")
 
     if isinstance(action_space, gym.spaces.Discrete):
+        print(f"action_space: {action_space}")
         action_size = action_space.n
     else:
         raise ValueError(f"Unexpected action space type: {type(action_space)}")

@@ -37,7 +37,6 @@ def main(num_episodes, max_steps_per_episode, visualize=False):
             total_reward += sum(rewards)
             step += 1
 
-
             if loss is not None:
                 print(f"Episode {episode + 1}, Step {step + 1}, Total Reward: {total_reward}, Loss: {loss:.4f}")
             else:

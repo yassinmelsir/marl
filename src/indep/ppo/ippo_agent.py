@@ -4,7 +4,7 @@ from src.indep.ppo.memory import Memory
 from src.indep.ppo.ppo_agent import PpoAgent
 
 
-class IPpoAgent:
+class IppoAgent:
     def __init__(self, n_agents, obs_dim, action_dim, lr, gamma, eps_clip, K_epochs):
         self.ppo_agents = []
         self.memories = []
@@ -27,7 +27,7 @@ class IPpoAgent:
             obs_tensor = torch.FloatTensor(observation).unsqueeze(0)
 
             if termination or truncation:
-                action, log_prob = None, None
+                return [True]
             else:
                 action, log_prob = self.ppo_agents[i].select_action(obs_tensor)
                 log_prob = log_prob.squeeze()

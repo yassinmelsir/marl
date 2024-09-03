@@ -32,7 +32,7 @@ class PpoAgent:
 
         rewards = torch.stack([torch.FloatTensor(row) for row in memory.rewards])
         old_observations = torch.stack([torch.FloatTensor(row) for row in memory.observations])
-        old_actions = torch.stack([torch.IntTensor(row) for row in memory.actions])
+        old_actions = torch.stack([torch.IntTensor(row) for row in memory.actions ])
         old_log_probs = torch.stack([torch.FloatTensor(row) for row in memory.log_probs])
 
         for _ in range(self.K_epochs):
