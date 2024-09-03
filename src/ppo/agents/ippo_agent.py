@@ -26,6 +26,7 @@ class IppoAgent:
             self.ppo_agents.append(ppo_agent)
 
     def step(self, env):
+        dones = []
         for i, agent_id in enumerate(env.agents):
             observation, reward, termination, truncation, _ = env.last()
             obs_tensor = torch.FloatTensor(observation).unsqueeze(0)
@@ -41,19 +42,24 @@ class IppoAgent:
             if action is not None:
                 action = torch.IntTensor([action]).squeeze()
 
-            self.memories[i].log_probs.append(log_prob)
-            self.memories[i].actions.append(action)
+            self.ppo_agents[i].memory.log_probs.append(log_prob)
+            self.ppo_agents[i].memory.actions.append(action)
 
-            self.memories[i].observations.append(obs_tensor.squeeze())
-            self.memories[i].rewards.append(torch.FloatTensor([reward]).squeeze())
-            self.memories[i].dones.append(torch.BoolTensor([termination or truncation]).squeeze())
+            done = torch.BoolTensor([termination or truncation]).squeeze()
+            reward = torch.FloatTensor([reward]).squeeze()
+            obs_tensor = obs_tensor.squeeze()
 
-        return [row.dones[-1] for row in self.memories]
+            self.ppo_agents[i].memory.observations.append(obs_tensor)
+            self.ppo_agents[i].memory.rewards.append(reward)
+            self.ppo_agents[i].memory.dones.append(done)
+
+            dones.append(termination or truncation)
+
+        return dones
 
     def update(self):
         for idx, agent in enumerate(self.ppo_agents):
-            agent.update(self.memories[idx])
-            self.memories[idx].clear_memory()
+            agent.update()
 
     def get_memories(self):
         return self.memories

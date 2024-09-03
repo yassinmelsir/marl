@@ -42,9 +42,7 @@ class PpoAgent:
 
         return rewards, old_observations, old_actions, old_log_probs
 
-    def update_actor(self, old_observations, old_actions, old_log_probs, rewards, observation_values):
-
-        advantages = rewards - observation_values.detach()
+    def update_actor(self, old_observations, old_actions, old_log):
         log_probs = self.actor(old_observations)
         dist = torch.distributions.Categorical(log_probs)
         new_log_probs = dist.log_prob(old_actions)
@@ -58,33 +56,17 @@ class PpoAgent:
         self.actor_optimizer.zero_grad()
         actor_loss.backward()
         self.actor_optimizer.step()
-
-    def update_critic(self, old_observations, rewards):
-        observation_values = self.critic(old_observations)
-
-        critic_loss = 0.5 * F.mse_loss(observation_values, rewards)
-        self.critic_optimizer.zero_grad()
-        critic_loss.backward()
-        self.critic_optimizer.step()
-
-        return observation_values
-
     def update(self):
         rewards, old_observations, old_actions, old_log_probs = self.get_update_data()
 
         for _ in range(self.K_epochs):
-            observation_values = self.update_critic(
-                old_observations=old_observations,
-                rewards=rewards
-            )
+            observation_values = self.critic(old_observations)
+            advantages = rewards - observation_values.detach()
 
-            self.update_actor(
-                old_observations=old_observations,
-                old_actions=old_actions,
-                old_log_probs=old_log_probs,
-                rewards=rewards,
-                observation_values=observation_values
-            )
+            critic_loss = 0.5 * F.mse_loss(observation_values, rewards)
+            self.critic_optimizer.zero_grad()
+            critic_loss.backward()
+            self.critic_optimizer.step()
 
 
 
