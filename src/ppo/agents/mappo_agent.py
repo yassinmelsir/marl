@@ -1,4 +1,7 @@
 import torch
+from torch import optim
+
+import torch.nn.functional as F
 
 from src.ppo.agents.ippo_agent import IppoAgent
 from src.ppo.agents.ppo_agent import PpoAgent
@@ -14,16 +17,62 @@ class MappoAgent(IppoAgent):
         self.memories = []
         global_obs_dim = obs_dim * n_agents
         self.centralized_critic = Critic(obs_dim=global_obs_dim, hidden_dim=hidden_dim)
+        self.centralized_critic_optimizer = optim.Adam(self.centralized_critic.parameters(), lr=lr)
         for _ in range(n_agents):
             actor = Actor(obs_dim=obs_dim, action_dim=action_dim, hidden_dim=hidden_dim)
+            memory = Memory()
             ppo_agent = PpoAgent(
                 actor=actor,
                 critic=self.centralized_critic,
+                memory=memory,
                 lr=lr,
                 gamma=gamma,
                 eps_clip=eps_clip,
                 K_epochs=K_epochs
             )
             self.ppo_agents.append(ppo_agent)
-            self.memories.append(Memory())
+
+    def update_centralized_critic(self, global_old_observations, global_rewards):
+        print(f"global_old_observations: {global_old_observations}")
+        print(f"global_rewards: {global_rewards}")
+
+        global_observation_values = self.centralized_critic(global_old_observations)
+
+        critic_loss = 0.5 * F.mse_loss(global_observation_values, global_rewards)
+        self.centralized_critic_optimizer.zero_grad()
+        critic_loss.backward()
+        self.centralized_critic_optimizer.step()
+
+        return global_observation_values
+
+    def update(self):
+        global_rewards, global_old_observations, global_old_actions, global_old_log_probs = [], [], [], []
+        for idx, agent in enumerate(self.ppo_agents):
+            rewards, old_observations, old_actions, old_log_probs = agent.get_update_data()
+            global_rewards.append(rewards)
+            global_old_observations.append(old_observations)
+            global_old_actions.append(old_actions)
+            global_old_log_probs.append(old_log_probs)
+
+        global_old_observations = torch.stack(global_old_observations)
+        global_rewards = torch.stack(global_rewards)
+
+        global_observation_values = self.update_centralized_critic(
+            global_old_observations=global_old_observations,
+            global_rewards=global_rewards
+        )
+
+        for idx, agent in enumerate(self.ppo_agents):
+            rewards, old_observations, old_actions, old_log_probs = agent.get_update_data()
+
+            agent.update_actor(
+                old_observations=old_observations,
+                old_actions=old_actions,
+                old_log_probs=old_log_probs,
+                rewards=rewards,
+                observation_values=global_observation_values
+            )
+
+            agent.memory.clear_memory()
+
 
