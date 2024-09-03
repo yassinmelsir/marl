@@ -1,17 +1,21 @@
 import torch
 
-from src.indep.ppo.memory import Memory
-from src.indep.ppo.ppo_agent import PpoAgent
+from src.ppo.agents.ppo_agent import PpoAgent
+from src.ppo.common.memory import Memory
+from src.ppo.networks.actor import Actor
+from src.ppo.networks.critic import Critic
 
 
 class IppoAgent:
-    def __init__(self, n_agents, obs_dim, action_dim, lr, gamma, eps_clip, K_epochs):
+    def __init__(self, n_agents, obs_dim, action_dim, hidden_dim, lr, gamma, eps_clip, K_epochs):
         self.ppo_agents = []
         self.memories = []
         for _ in range(n_agents):
+            actor = Actor(obs_dim=obs_dim, action_dim=action_dim, hidden_dim=hidden_dim)
+            critic = Critic(obs_dim=obs_dim, hidden_dim=hidden_dim)
             ppo_agent = PpoAgent(
-                obs_dim=obs_dim,
-                action_dim=action_dim,
+                actor=actor,
+                critic=critic,
                 lr=lr,
                 gamma=gamma,
                 eps_clip=eps_clip,

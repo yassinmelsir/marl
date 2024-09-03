@@ -1,22 +1,23 @@
-import numpy as np
 import torch
-from torch import optim
+from torch import optim, nn
 import torch.nn.functional as F
-
-from src.indep.ppo.actor_critic import ActorCritic
 
 
 class PpoAgent:
-    def __init__(self, obs_dim, action_dim, lr, gamma, eps_clip, K_epochs):
-        self.actor_critic = ActorCritic(obs_dim=obs_dim, action_dim=action_dim)
-        self.optimizer = optim.Adam(self.actor_critic.parameters(), lr=lr)
+    def __init__(self, actor: nn.Module, critic: nn.Module, lr: float, gamma: float, eps_clip: float, K_epochs: int):
+        self.actor = actor
+        self.actor_optimizer = optim.Adam(self.actor.parameters(), lr=lr)
+
+        self.critic = critic
+        self.critic_optimizer = optim.Adam(self.critic.parameters(), lr=lr)
+
         self.gamma = gamma
         self.eps_clip = eps_clip
         self.K_epochs = K_epochs
 
     def select_action(self, observation):
         with torch.no_grad():
-            action_probs, _ = self.actor_critic(observation)
+            action_probs = self.actor(observation)
         action_dist = torch.distributions.Categorical(action_probs)
         action = action_dist.sample()
         return action.item(), action_dist.log_prob(action)
@@ -36,19 +37,25 @@ class PpoAgent:
         old_log_probs = torch.tensor(memory.log_probs, dtype=torch.float32)
 
         for _ in range(self.K_epochs):
-            log_probs, observation_values = self.actor_critic(old_observations)
+            observation_values = self.critic(old_observations)
+            advantages = rewards - observation_values.detach()
+
+            critic_loss = 0.5 * F.mse_loss(observation_values, rewards)
+            self.critic_optimizer.zero_grad()
+            critic_loss.backward()
+            self.critic_optimizer.step()
+
+            log_probs = self.actor(old_observations)
             dist = torch.distributions.Categorical(log_probs)
             new_log_probs = dist.log_prob(old_actions)
 
             ratios = torch.exp(new_log_probs - old_log_probs)
-            advantages = rewards - observation_values
-
             surr1 = ratios * advantages
             surr2 = torch.clamp(ratios, 1 - self.eps_clip, 1 + self.eps_clip) * advantages
 
-            loss = -torch.min(surr1, surr2) + 0.5 * F.mse_loss(observation_values, rewards)
+            actor_loss = -torch.min(surr1, surr2).mean()
 
-            self.optimizer.zero_grad()
-            loss.mean().backward()
-            self.optimizer.step()
+            self.actor_optimizer.zero_grad()
+            actor_loss.backward()
+            self.actor_optimizer.step()
 

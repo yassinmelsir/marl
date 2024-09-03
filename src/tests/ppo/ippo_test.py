@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 import numpy as np
 
-from src.indep.ppo.ippo_agent import IppoAgent
+from src.ppo.agents.ippo_agent import IppoAgent
 from src.tests.common.common import LoopParams
 from src.tests.common.simple_spread import SimpleSpread, SimpleSpreadParams
 
@@ -12,6 +12,7 @@ class IppoParams:
     gamma: float
     eps_clip: float
     K_epochs: int
+    hidden_dim: int
 
 
 class IppoTest:
@@ -29,6 +30,7 @@ class IppoTest:
             n_agents=n_agents,
             obs_dim=obs_dim,
             action_dim=action_dim,
+            hidden_dim=ippo_params.hidden_dim,
             lr=ippo_params.lr,
             gamma=ippo_params.gamma,
             eps_clip=ippo_params.eps_clip,
