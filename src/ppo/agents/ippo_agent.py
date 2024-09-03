@@ -9,7 +9,6 @@ from src.ppo.networks.critic import Critic
 class IppoAgent:
     def __init__(self, n_agents, obs_dim, action_dim, hidden_dim, lr, gamma, eps_clip, K_epochs):
         self.ppo_agents = []
-        self.memories = []
         for _ in range(n_agents):
             actor = Actor(obs_dim=obs_dim, action_dim=action_dim, hidden_dim=hidden_dim)
             critic = Critic(obs_dim=obs_dim, hidden_dim=hidden_dim)
@@ -60,7 +59,8 @@ class IppoAgent:
     def update(self):
         for idx, agent in enumerate(self.ppo_agents):
             agent.update()
+            agent.memory.clear_memory()
 
     def get_memories(self):
-        return self.memories
+        return [agent.memory for agent in self.ppo_agents]
 

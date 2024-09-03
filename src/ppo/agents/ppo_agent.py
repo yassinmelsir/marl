@@ -86,4 +86,3 @@ class PpoAgent:
                 observation_values=observation_values
             )
 
-        self.memory.clear_memory()
