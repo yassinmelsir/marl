@@ -1,8 +1,8 @@
 from dataclasses import dataclass
 from typing import Union, Type
 
-from src.ppo.agents.ippo_agent import IppoAgent
-from src.ppo.agents.mappo_agent import MappoAgent
+from src.agents.ippo_agent import IppoAgent
+from src.agents.mappo_agent import MappoAgent
 
 
 @dataclass

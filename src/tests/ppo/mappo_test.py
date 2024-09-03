@@ -1,4 +1,4 @@
-from src.ppo.agents.mappo_agent import MappoAgent
+from src.agents.mappo_agent import MappoAgent
 from src.tests.common.common import LoopParams
 from src.tests.common.simple_spread import SimpleSpreadParams
 from src.tests.ppo.common import PpoParams

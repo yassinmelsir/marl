@@ -1,4 +1,4 @@
-from src.ppo.agents.ippo_agent import IppoAgent
+from src.agents.ippo_agent import IppoAgent
 from src.tests.common.common import LoopParams
 from src.tests.common.simple_spread import SimpleSpreadParams
 from src.tests.ppo.common import PpoParams

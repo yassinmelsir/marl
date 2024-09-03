@@ -1,6 +1,5 @@
 from dataclasses import dataclass
 
-import gymnasium as gym
 @dataclass
 class LoopParams:
     max_episodes: int

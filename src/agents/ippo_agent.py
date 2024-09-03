@@ -1,9 +1,9 @@
 import torch
 
-from src.ppo.agents.ppo_agent import PpoAgent
-from src.ppo.common.memory import Memory
-from src.ppo.networks.actor import Actor
-from src.ppo.networks.critic import Critic
+from src.agents.ppo_agent import PpoAgent
+from src.common.memory import Memory
+from src.networks.actor import Actor
+from src.networks.critic import Critic
 
 
 class IppoAgent:

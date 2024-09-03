@@ -2,7 +2,7 @@ import torch
 from torch import optim, nn
 import torch.nn.functional as F
 
-from src.ppo.common.memory import Memory
+from src.common.memory import Memory
 
 
 class PpoAgent:
@@ -61,7 +61,6 @@ class PpoAgent:
 
     def update_critic(self, old_observations, rewards):
         observation_values = self.critic(old_observations)
-
         critic_loss = 0.5 * F.mse_loss(observation_values, rewards)
         self.critic_optimizer.zero_grad()
         critic_loss.backward()
