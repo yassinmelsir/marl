@@ -1,7 +1,7 @@
 import torch.nn as nn
 
 
-class Critic(nn.Module):
+class StateCritic(nn.Module):
     def __init__(self, obs_dim, hidden_dim):
         super().__init__()
         self.critic = nn.Sequential(

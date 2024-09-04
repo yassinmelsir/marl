@@ -5,8 +5,8 @@ import torch.nn.functional as F
 from src.agents.ppo.ippo_agent import IppoAgent
 from src.agents.ppo.ppo_agent import PpoAgent
 from src.common.memory import Memory
-from src.networks.actor import Actor
-from src.networks.critic import Critic
+from src.networks.stochastic_actor import Actor
+from src.networks.state_critic import Critic
 
 
 class MappoAgent(IppoAgent):

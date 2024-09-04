@@ -5,8 +5,8 @@ import torch.nn.functional as F
 from src.agents.a2c.a2c_agent import A2cAgent
 from src.agents.a2c.ia2c_agent import Ia2cAgent
 from src.common.memory import Memory
-from src.networks.actor import Actor
-from src.networks.critic import Critic
+from src.networks.stochastic_actor import Actor
+from src.networks.state_critic import Critic
 
 
 class Maa2cAgent(Ia2cAgent):
