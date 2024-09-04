@@ -4,8 +4,8 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torchrl.data import ReplayBuffer, ListStorage
 
-from src.indep.dqn.deep_q_network import DeepQNetwork
-from src.coop.qmix.mixing_network import MixingNetwork
+from src.networks.deep_q_network import DeepQNetwork
+from src.networks.mixing_network import MixingNetwork
 
 
 class QmAgent:

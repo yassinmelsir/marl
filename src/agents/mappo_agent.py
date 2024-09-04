@@ -1,6 +1,5 @@
 import torch
 from torch import optim
-
 import torch.nn.functional as F
 
 from src.agents.ippo_agent import IppoAgent
@@ -16,7 +15,6 @@ class MappoAgent(IppoAgent):
         self.ppo_agents = []
         self.memories = []
         global_obs_dim = obs_dim * n_agents
-        print(f"global_obs_dim: {global_obs_dim}")
         self.centralized_critic = Critic(obs_dim=global_obs_dim, hidden_dim=hidden_dim)
         self.centralized_critic_optimizer = optim.Adam(self.centralized_critic.parameters(), lr=lr)
         for _ in range(n_agents):
@@ -34,8 +32,6 @@ class MappoAgent(IppoAgent):
             self.ppo_agents.append(ppo_agent)
 
     def update_centralized_critic(self, global_old_observations, global_rewards):
-        print(f"global_old_observations shape: {global_old_observations.shape}")
-        print(f"global_rewards shape: {global_rewards.shape}")
 
         global_observation_values = self.centralized_critic(global_old_observations)
 
@@ -55,7 +51,11 @@ class MappoAgent(IppoAgent):
             global_old_actions.append(old_actions)
             global_old_log_probs.append(old_log_probs)
 
-        global_old_observations = torch.stack(global_old_observations).view(1, -1)
+        global_old_observations = torch.stack(global_old_observations)
+
+        num_agents, timesteps, global_obs_dim = global_old_observations.shape
+        global_old_observations = global_old_observations.view(timesteps, num_agents * global_obs_dim)
+
         global_rewards = torch.stack(global_rewards).sum(dim=0)
 
         global_observation_values = self.update_centralized_critic(
