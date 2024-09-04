@@ -3,7 +3,7 @@ import torch
 from torch import optim, nn
 from torchrl.data import ReplayBuffer, ListStorage
 
-from src.indep.dqn.deep_q_network import DeepQNetwork
+from src.networks.deep_q_network import DeepQNetwork
 
 
 class DqnAgent:

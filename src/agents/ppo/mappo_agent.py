@@ -2,8 +2,8 @@ import torch
 from torch import optim
 import torch.nn.functional as F
 
-from src.agents.ippo_agent import IppoAgent
-from src.agents.ppo_agent import PpoAgent
+from src.agents.ppo.ippo_agent import IppoAgent
+from src.agents.ppo.ppo_agent import PpoAgent
 from src.common.memory import Memory
 from src.networks.actor import Actor
 from src.networks.critic import Critic
@@ -75,6 +75,5 @@ class MappoAgent(IppoAgent):
             )
 
             agent.memory.clear_memory()
-            print(agent.memory.rewards)
 
 
