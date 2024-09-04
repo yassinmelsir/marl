@@ -2,16 +2,16 @@ import torch
 
 from src.agents.ppo.ppo_agent import PpoAgent
 from src.common.memory import Memory
-from src.networks.stochastic_actor import Actor
-from src.networks.state_critic import Critic
+from src.networks.stochastic_actor import StochasticActor
+from src.networks.state_critic import StateCritic
 
 
 class IppoAgent:
     def __init__(self, n_agents, obs_dim, action_dim, hidden_dim, lr, gamma, eps_clip, K_epochs):
         self.ppo_agents = []
         for _ in range(n_agents):
-            actor = Actor(obs_dim=obs_dim, action_dim=action_dim, hidden_dim=hidden_dim)
-            critic = Critic(obs_dim=obs_dim, hidden_dim=hidden_dim)
+            actor = StochasticActor(obs_dim=obs_dim, action_dim=action_dim, hidden_dim=hidden_dim)
+            critic = StateCritic(obs_dim=obs_dim, hidden_dim=hidden_dim)
             memory = Memory()
             ppo_agent = PpoAgent(
                 actor=actor,

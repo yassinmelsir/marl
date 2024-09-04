@@ -5,8 +5,8 @@ import torch.nn.functional as F
 from src.agents.a2c.a2c_agent import A2cAgent
 from src.agents.a2c.ia2c_agent import Ia2cAgent
 from src.common.memory import Memory
-from src.networks.stochastic_actor import Actor
-from src.networks.state_critic import Critic
+from src.networks.stochastic_actor import StochasticActor
+from src.networks.state_critic import StateCritic
 
 
 class Maa2cAgent(Ia2cAgent):
@@ -14,10 +14,10 @@ class Maa2cAgent(Ia2cAgent):
         super().__init__(n_agents, obs_dim, action_dim, hidden_dim, lr, gamma, eps_clip, K_epochs, entropy_coefficient)
         self.a2c_agents = []
         self.memories = []
-        self.centralized_critic = Critic(obs_dim=obs_dim, hidden_dim=hidden_dim)
+        self.centralized_critic = StateCritic(obs_dim=obs_dim, hidden_dim=hidden_dim)
         self.centralized_critic_optimizer = optim.Adam(self.centralized_critic.parameters(), lr=lr)
         for _ in range(n_agents):
-            actor = Actor(obs_dim=obs_dim, action_dim=action_dim, hidden_dim=hidden_dim)
+            actor = StochasticActor(obs_dim=obs_dim, action_dim=action_dim, hidden_dim=hidden_dim)
             memory = Memory()
             a2c_agent = A2cAgent(
                 actor=actor,

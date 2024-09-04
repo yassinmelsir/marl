@@ -5,8 +5,8 @@ import torch.nn.functional as F
 from src.agents.ppo.ippo_agent import IppoAgent
 from src.agents.ppo.ppo_agent import PpoAgent
 from src.common.memory import Memory
-from src.networks.stochastic_actor import Actor
-from src.networks.state_critic import Critic
+from src.networks.stochastic_actor import StochasticActor
+from src.networks.state_critic import StateCritic
 
 
 class MappoAgent(IppoAgent):
@@ -15,10 +15,10 @@ class MappoAgent(IppoAgent):
         self.ppo_agents = []
         self.memories = []
         global_obs_dim = obs_dim * n_agents
-        self.centralized_critic = Critic(obs_dim=global_obs_dim, hidden_dim=hidden_dim)
+        self.centralized_critic = StateCritic(obs_dim=global_obs_dim, hidden_dim=hidden_dim)
         self.centralized_critic_optimizer = optim.Adam(self.centralized_critic.parameters(), lr=lr)
         for _ in range(n_agents):
-            actor = Actor(obs_dim=obs_dim, action_dim=action_dim, hidden_dim=hidden_dim)
+            actor = StochasticActor(obs_dim=obs_dim, action_dim=action_dim, hidden_dim=hidden_dim)
             memory = Memory()
             ppo_agent = PpoAgent(
                 actor=actor,
