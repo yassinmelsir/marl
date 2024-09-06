@@ -32,9 +32,10 @@ class PpoTest:
         max_timesteps = self.loop_params.max_timesteps
         update_timestep = self.loop_params.update_timestep
 
-        timestep = 0
         for episode in range(max_episodes):
             self.simple_spread.reset()
+            timestep = 0
+
             for t in range(max_timesteps):
                 env = self.simple_spread.get_env()
                 dones = self.ppo_agent.step(env=env)
@@ -44,7 +45,6 @@ class PpoTest:
 
                 if timestep % update_timestep == 0:
                     self.ppo_agent.update()
-                    timestep = 0
 
                 timestep += 1
 

@@ -17,10 +17,19 @@ class DdpgParams:
     batch_size: int
     buffer_size: int
     noise_scale: Union[float, None]
+    temperature: float
     agent: Type[Union[IddpgAgent, MaddpgAgent]]
+
 
 loop_params = LoopParams(max_episodes=100, max_timesteps=1000, update_timestep=100)
 simple_spread_params = SimpleSpreadParams(n=3, local_ratio=0.5, max_cycles=25)
 ddpg_params = DdpgParams(
     agent=IddpgAgent,
-    hidden_dim=256, lr=3e-6, gamma=0.99, eps_clip=0.2, K_epochs=4, batch_size=5, buffer_size=10000, noise_scale=None)
+    hidden_dim=256, lr=3e-6,
+    gamma=0.99, eps_clip=0.2,
+    K_epochs=4,
+    batch_size=5,
+    buffer_size=10000,
+    noise_scale=None,
+    temperature=1.0
+)

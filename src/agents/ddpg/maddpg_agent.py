@@ -5,13 +5,13 @@ import torch.nn.functional as F
 from src.agents.ddpg.iddpg_agent import IddpgAgent
 from src.agents.ddpg.ddpg_agent import DdpgAgent
 from src.common.replay_buffer import ReplayBuffer
-from src.networks.deterministic_actor import DeterministicActor
+from src.networks.gumbel_actor import GumbelActor
 from src.networks.value_critic import ValueCritic
 
 
 class MaddpgAgent(IddpgAgent):
-    def __init__(self, n_agents, obs_dim, action_dim, hidden_dim, lr, gamma, eps_clip, K_epochs, buffer_size, batch_size, noise_scale: float):
-        super().__init__(n_agents, obs_dim, action_dim, hidden_dim, lr, gamma, eps_clip, K_epochs, buffer_size, batch_size, noise_scale)
+    def __init__(self, n_agents: int, obs_dim: int, action_dim: int, hidden_dim: int, lr: float, gamma: float, eps_clip: float, K_epochs: int, buffer_size: int, batch_size: int, noise_scale: float, temperature: float):
+        super().__init__(n_agents, obs_dim, action_dim, hidden_dim, lr, gamma, eps_clip, K_epochs, buffer_size, batch_size, noise_scale,  temperature)
         self.ddpg_agents = []
         self.memories = []
         global_obs_dim = obs_dim * n_agents
@@ -22,8 +22,8 @@ class MaddpgAgent(IddpgAgent):
         self.centralized_target_critic = ValueCritic(obs_dim=global_obs_dim, action_dim=global_action_dim, hidden_dim=hidden_dim)
 
         for _ in range(n_agents):
-            actor = DeterministicActor(obs_dim=obs_dim, action_dim=action_dim, hidden_dim=hidden_dim)
-            target_actor = DeterministicActor(obs_dim=obs_dim, action_dim=action_dim, hidden_dim=hidden_dim)
+            actor = GumbelActor(obs_dim=obs_dim, action_dim=action_dim, hidden_dim=hidden_dim)
+            target_actor = GumbelActor(obs_dim=obs_dim, action_dim=action_dim, hidden_dim=hidden_dim)
             replay_buffer = ReplayBuffer(buffer_size=buffer_size, batch_size=batch_size)
             ddpg_agent = DdpgAgent(
                 actor=actor,

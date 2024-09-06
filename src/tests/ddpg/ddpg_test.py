@@ -27,7 +27,8 @@ class DdpgTest:
             K_epochs=ddpg_params.K_epochs,
             buffer_size=ddpg_params.buffer_size,
             batch_size=ddpg_params.batch_size,
-            noise_scale=ddpg_params.noise_scale
+            noise_scale=ddpg_params.noise_scale,
+            temperature=ddpg_params.temperature
         )
 
     def main(self):
@@ -35,30 +36,32 @@ class DdpgTest:
         max_timesteps = self.loop_params.max_timesteps
         update_timestep = self.loop_params.update_timestep
 
-        timestep = 0
         for episode in range(max_episodes):
             self.simple_spread.reset()
+            total_reward = []
+            timestep = 0
+
             for t in range(max_timesteps):
                 env = self.simple_spread.get_env()
-                dones = self.ddpg_agent.step(env=env)
+                rewards, dones = self.ddpg_agent.step(env=env)
 
                 if all(dones):
                     break
 
                 if timestep % update_timestep == 0:
                     self.ddpg_agent.update()
-                    timestep = 0
 
+                total_reward += rewards
                 timestep += 1
 
                 if (timestep + 1) % 100 == 0:
                     print(
                         f"timestep {timestep + 1} - average reward: \
-                         {np.mean([np.sum(m.rewards) for m in self.ddpg_agent.get_memories()])}")
+                         {np.mean([rewards])}")
 
             print(f"Episode {episode + 1} finished")
 
             if (episode + 1) % 100 == 0:
                 print(
                     f"Episode {episode + 1} - average reward: \
-                     {np.mean([np.sum(m.rewards) for m in self.ddpg_agent.get_memories()])}")
+                     {np.mean([np.sum(total_reward)])}")
