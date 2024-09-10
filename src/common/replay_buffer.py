@@ -7,21 +7,13 @@ class ReplayBuffer:
         self.buffer = deque(maxlen=buffer_size)
         self.batch_size = batch_size
 
-    def add(self, state, action, reward, next_state, done):
-        experience = (state, action, reward, next_state, done)
+    def add(self, experience):
         self.buffer.append(experience)
 
     def sample(self):
         batch = random.sample(self.buffer, self.batch_size)
-        states, actions, rewards, next_states, dones = zip(*batch)
-        return (
-            torch.stack(states),
-            torch.stack(actions),
-            torch.stack(rewards),
-            torch.stack(next_states),
-            torch.stack(dones)
-        )
 
+        return batch
     def size(self):
         return len(self.buffer)
 
