@@ -38,9 +38,6 @@ class Ia2cAgent:
 
             env.step(action)
 
-            # if action is not None:
-            #     action = torch.IntTensor([action]).squeeze()
-
             done = torch.BoolTensor([termination or truncation]).squeeze()
             reward = torch.FloatTensor([reward]).squeeze()
             observation = observation.squeeze()
