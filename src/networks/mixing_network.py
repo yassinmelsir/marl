@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from src.dql.networks.hyper_network import Hypernetwork
+from src.networks.hyper_network import Hypernetwork
 
 
 class MixingNetwork(nn.Module):

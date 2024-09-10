@@ -1,5 +1,5 @@
 from pettingzoo.mpe import simple_spread_v3
-from src.coop.qmix.qm_agent import QmAgent
+from src.coop.qmix.qmix_agent import QmixAgent
 from src.tests.common import get_obs_action_size
 
 
@@ -9,7 +9,7 @@ def main(num_episodes, max_steps_per_episode, visualize=False):
 
     obs_size, action_size = get_obs_action_size(env=env)
 
-    agent = QmAgent(
+    agent = QmixAgent(
         n_agents=len(env.agents),
         embed_dim=256,
         mixing_state_dim=obs_size * len(env.agents),

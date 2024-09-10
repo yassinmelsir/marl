@@ -8,7 +8,7 @@ from src.networks.deep_q_network import DeepQNetwork
 from src.networks.mixing_network import MixingNetwork
 
 
-class QmAgent:
+class QmixAgent:
     def __init__(self, n_agents, embed_dim, mixing_state_dim,
                  q_agent_state_dim, hidden_dim, hidden_output_dim, n_actions,
                  learning_rate, epsilon, gamma, buffer_capacity, batch_size):
@@ -76,17 +76,14 @@ class QmAgent:
             q_values_batch.append(torch.tensor(np.array(q_values, dtype=np.float32)))
             next_q_values_batch.append(torch.tensor(np.array(q_values, dtype=np.float32)))
 
-        q_values_batch = torch.stack(q_values_batch).reshape(self.batch_size,-1)
-        next_q_values_batch = torch.stack(next_q_values_batch).reshape(self.batch_size,-1)
+        q_values_batch = torch.stack(q_values_batch).reshape(self.batch_size, -1)
+        next_q_values_batch = torch.stack(next_q_values_batch).reshape(self.batch_size, -1)
 
-        state_batch = state_batch.reshape(self.batch_size,-1)
-        next_state_batch = next_state_batch.reshape(self.batch_size,-1)
+        state_batch = state_batch.reshape(self.batch_size, -1)
+        next_state_batch = next_state_batch.reshape(self.batch_size, -1)
 
         global_q_value = self.mixing_network(q_values_batch, state_batch)
         next_global_q_value = self.mixing_network(next_q_values_batch, next_state_batch)
-
-        if global_q_value.shape != next_global_q_value.shape:
-            raise "joint_q_values.shape != target_q_values.shape"
 
         with torch.no_grad():
             rewards_sum_batch = rewards_batch.sum(dim=1, keepdim=True)
@@ -124,9 +121,6 @@ class QmAgent:
             next_state.append(np.array(next_observation, dtype=np.float32))
             rewards.append(np.array(reward, dtype=np.float32))
             dones.append(np.array(termination or truncation, dtype=np.float32))
-
-        for item in [state, next_state, rewards, dones]:
-            if len(item) != len(state): raise "Item mismatch in step data!"
 
         state = torch.tensor(np.array(state), dtype=torch.float32)
         next_state = torch.tensor(np.array(next_state), dtype=torch.float32)
