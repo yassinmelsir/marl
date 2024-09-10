@@ -1,4 +1,5 @@
 import numpy as np
+import torch
 
 from src.tests.common.common import LoopParams
 from src.tests.common.simple_spread import SimpleSpread, SimpleSpreadParams
@@ -31,16 +32,19 @@ class DdpgTest:
             temperature=ddpg_params.temperature
         )
 
+    def get_rewards(self, total_reward):
+        return np.mean([np.sum(rwds) for rwds in total_reward])
+
     def main(self):
         max_episodes = self.loop_params.max_episodes
         max_timesteps = self.loop_params.max_timesteps
         update_timestep = self.loop_params.update_timestep
 
+        timestep = 0
+        total_reward = []
         for episode in range(max_episodes):
             self.simple_spread.reset()
-            total_reward = []
-            timestep = 0
-
+            timestep_reward = []
             for t in range(max_timesteps):
                 env = self.simple_spread.get_env()
                 rewards, dones = self.ddpg_agent.step(env=env)
@@ -50,18 +54,22 @@ class DdpgTest:
 
                 if timestep % update_timestep == 0:
                     self.ddpg_agent.update()
+                    timestep = 0
 
-                total_reward += rewards
+                timestep_reward.append(np.array(rewards))
                 timestep += 1
 
                 if (timestep + 1) % 100 == 0:
                     print(
                         f"timestep {timestep + 1} - average reward: \
-                         {np.mean([rewards])}")
+                         {self.get_rewards(total_reward=total_reward)}")
+
+
+            total_reward.append(np.array(timestep_reward))
 
             print(f"Episode {episode + 1} finished")
 
             if (episode + 1) % 100 == 0:
                 print(
                     f"Episode {episode + 1} - average reward: \
-                     {np.mean([np.sum(total_reward)])}")
+                     {self.get_rewards(total_reward=total_reward)}")
