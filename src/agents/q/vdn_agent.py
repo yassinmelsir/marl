@@ -1,9 +1,8 @@
 import torch
-import numpy as np
 import torch.nn as nn
 import torch.nn.functional as F
-from torchrl.data import ReplayBuffer, ListStorage
 
+from src.common.replay_buffer import ReplayBuffer
 from src.networks.deep_q_network import DeepQNetwork
 
 class VdnAgent:
@@ -21,7 +20,10 @@ class VdnAgent:
 
         self.optimizer = torch.optim.Adam(params=self.agents.parameters(), lr=learning_rate)
 
-        self.replay_buffer = ReplayBuffer(batch_size=batch_size, storage=ListStorage(max_size=buffer_capacity))
+        for param in self.agents.parameters():
+            assert param.requires_grad, "Model parameters do not require gradients"
+
+        self.replay_buffer = ReplayBuffer(batch_size=batch_size, buffer_size=buffer_capacity)
         self.batch_size = batch_size
         self.epsilon = epsilon
         self.gamma = gamma
@@ -43,78 +45,91 @@ class VdnAgent:
             return q_value
 
     def update(self):
-        if len(self.replay_buffer) < self.batch_size:
-            return None
+        if self.replay_buffer.can_sample():
+            observations, next_observations, rewards, dones = self.get_batch()
 
-        state_batch, next_state_batch, rewards_batch, dones_batch, step_no = \
-            self.replay_buffer.sample()
+            q_values_batch, next_q_values_batch = [], []
+            for i in range(len(observations)):
+                state, next_state = observations[i], next_observations[i]
+                q_values, next_q_values = [], []
+                for id in range(len(state)):
+                    action_q = self.max_action_q_value(observation=state[id], id=id)
+                    next_action_q = self.max_action_q_value(observation=next_state[id], id=id)
+                    q_values.append(action_q)
+                    next_q_values.append(next_action_q)
 
-        for item in [next_state_batch, rewards_batch, dones_batch, step_no]:
-            if len(item) != len(state_batch): raise "Length mismatch in batch!"
+                q_values_batch.append(torch.tensor(q_values, dtype=torch.float32, requires_grad=True))
+                next_q_values_batch.append(torch.tensor(next_q_values, dtype=torch.float32, requires_grad=True))
 
-        q_values_batch, next_q_values_batch = [], []
-        for j in range(len(state_batch)):
-            state, next_state = state_batch[j], next_state_batch[j]
-            q_values, next_q_values = [], []
-            for id in range(len(state)):
-                action_q = self.max_action_q_value(observation=state[id], id=id)
-                next_action_q = self.max_action_q_value(observation=next_state[id], id=id)
-                q_values.append(action_q)
-                next_q_values.append(next_action_q)
+            q_values_batch = torch.stack(q_values_batch).reshape(self.batch_size, -1)
+            next_q_values_batch = torch.stack(next_q_values_batch).reshape(self.batch_size,-1)
 
-            q_values_batch.append(torch.tensor(np.array(q_values, dtype=np.float32)))
-            next_q_values_batch.append(torch.tensor(np.array(q_values, dtype=np.float32)))
+            global_q_value = q_values_batch.sum(dim=1, keepdim=True)
+            next_global_q_value = next_q_values_batch.sum(dim=1, keepdim=True)
+            rewards = rewards.sum(dim=1, keepdim=True)
+            dones = dones.float().sum(dim=1, keepdim=True)
 
-        q_values_batch = torch.stack(q_values_batch).reshape(self.batch_size,-1)
-        next_q_values_batch = torch.stack(next_q_values_batch).reshape(self.batch_size,-1)
+            with torch.no_grad():
+                y_tot = rewards + self.gamma * (1 - dones) * next_global_q_value
 
-        global_q_value = q_values_batch.sum(dim=1, keepdim=True)
-        next_global_q_value = next_q_values_batch.sum(dim=1, keepdim=True)
+            loss = F.mse_loss(y_tot, global_q_value)
 
-        with torch.no_grad():
-            rewards_sum_batch = rewards_batch.sum(dim=1, keepdim=True)
-            dones_sum_batch = dones_batch.sum(dim=1, keepdim=True)
-            y_tot = rewards_sum_batch + self.gamma * (1 - dones_sum_batch) * next_global_q_value
+            self.optimizer.zero_grad()
+            loss.backward()
+            self.optimizer.step()
 
-        loss = F.mse_loss(y_tot, global_q_value)
+            return loss.item()
 
-        self.optimizer.zero_grad()
-        loss.backward()
-        self.optimizer.step()
+    def get_batch(self):
+        batch = self.replay_buffer.sample()
+        observations, next_observations, rewards, dones = zip(*batch)
 
-        return loss.item()
+        return (
+            torch.stack(observations),
+            torch.stack(next_observations),
+            torch.stack(rewards),
+            torch.stack(dones)
+        )
 
-    def step(self, env, step):
-        state = []
-        next_state = []
+
+    def step(self, env):
+        states = []
+        next_states = []
         rewards = []
         dones = []
         for idx, agent_id in enumerate(env.agents):
-            observation, reward, termination, truncation, info = env.last()
-
-            if np.isscalar(observation):
-                observation = np.array(observation)
+            observation, reward, termination, truncation, _ = env.last()
+            obs_tensor = torch.FloatTensor(observation)
 
             if termination or truncation:
-                action = None
+                return rewards, [True]
             else:
-                action = self.select_action(observation=torch.FloatTensor(observation), id=idx)
+                action = self.select_action(observation=obs_tensor, id=idx)
 
             env.step(action)
-
             next_observation = env.observe(agent_id)
-            state.append(np.array(observation, dtype=np.float32))
-            next_state.append(np.array(next_observation, dtype=np.float32))
-            rewards.append(np.array(reward, dtype=np.float32))
-            dones.append(np.array(termination or truncation, dtype=np.float32))
 
-        state = torch.tensor(np.array(state), dtype=torch.float32)
-        next_state = torch.tensor(np.array(next_state), dtype=torch.float32)
-        rewards = torch.tensor(np.array(rewards), dtype=torch.float32)
-        dones = torch.tensor(np.array(dones), dtype=torch.float32)
+            next_obs_tensor = torch.FloatTensor(next_observation)
+            done_tensor = torch.BoolTensor([termination or truncation])
+            reward_tensor = torch.FloatTensor([reward])
 
-        data = (state, next_state, rewards, dones, step)
+            states.append(obs_tensor)
+            next_states.append(next_obs_tensor)
+            rewards.append(reward_tensor)
+            dones.append(done_tensor)
 
-        self.replay_buffer.add(data)
+        states = torch.stack(states)
+        next_states = torch.stack(next_states)
+        rewards = torch.tensor(rewards)
+        dones = torch.tensor(dones)
+
+        experience = (
+            states,
+            next_states,
+            rewards,
+            dones
+        )
+
+        self.replay_buffer.add(experience)
 
         return rewards, dones
