@@ -1,13 +1,15 @@
 import torch
 
 from src.agents.a2c.a2c_agent import A2cAgent
+from src.agents.im_agent import ImAgent
 from src.common.memory import Memory
 from src.networks.stochastic_actor import StochasticActor
 from src.networks.state_critic import StateCritic
 
 
-class Ia2cAgent:
+class Ia2cAgent(ImAgent):
     def __init__(self, n_agents, obs_dim, action_dim, hidden_dim, learning_rate, gamma, epsilon, K_epochs, entropy_coefficient):
+        super().__init__(n_agents, obs_dim, action_dim, hidden_dim, learning_rate, gamma, epsilon, K_epochs)
         self.agents = []
         for _ in range(n_agents):
             actor = StochasticActor(obs_dim=obs_dim, action_dim=action_dim, hidden_dim=hidden_dim)
@@ -24,45 +26,3 @@ class Ia2cAgent:
                 entropy_coefficient=entropy_coefficient
             )
             self.agents.append(agent)
-
-    def step(self, env):
-        rewards = []
-        dones = []
-
-        for i, agent_id in enumerate(env.agents):
-            observation, reward, termination, truncation, _ = env.last()
-            obs_tensor = torch.FloatTensor(observation)
-
-            if termination or truncation:
-                return rewards, [True]
-            else:
-                action, action_probs = self.agents[i].select_action(obs_tensor)
-
-            env.step(action)
-
-            done = torch.BoolTensor([termination or truncation])
-            reward = torch.FloatTensor([reward])
-            observation = observation
-            next_observation = torch.FloatTensor(env.observe(agent_id))
-
-            self.agents[i].memory.observations.append(observation)
-            self.agents[i].memory.next_observations.append(next_observation)
-            self.agents[i].memory.actions.append(action)
-            self.agents[i].memory.action_probs.append(action_probs)
-            self.agents[i].memory.rewards.append(reward)
-            self.agents[i].memory.dones.append(done)
-
-
-            dones.append(termination or truncation)
-            rewards.append(reward)
-
-
-        return rewards, dones
-
-    def update(self):
-        for idx, agent in enumerate(self.agents):
-            agent.update()
-            agent.memory.clear_memory()
-
-    def get_memories(self):
-        return [agent.memory for agent in self.agents]
