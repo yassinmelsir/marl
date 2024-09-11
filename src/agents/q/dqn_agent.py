@@ -14,20 +14,23 @@ class DqnAgent:
         self.epsilon = epsilon
         self.gamma = gamma
 
-    def select_action(self, state):
+    def select_action(self, observation):
+        if not isinstance(observation, np.ndarray):
+            observation = np.array(observation)
+
+        observation = observation.reshape(1, -1)
+
+        observation = torch.FloatTensor(observation)
+
+        action_q_values, _ = self.q_network(observation)
+
         if np.random.random() < self.epsilon:
-            return np.random.randint(self.action_dim)
+            action = np.random.randint(self.action_dim)
         else:
             with torch.no_grad():
-                if not isinstance(state, np.ndarray):
-                    state = np.array(state)
+                action = action_q_values.argmax().item()
 
-                state = state.reshape(1, -1)
-
-                state = torch.FloatTensor(state)
-
-                action_q_values, _ = self.q_network(state)
-                return action_q_values.argmax().item()
+        return action, action_q_values
 
     def max_action_q_value(self, observation):
         with torch.no_grad():
@@ -38,9 +41,9 @@ class DqnAgent:
     def update(self):
         if self.replay_buffer.can_sample():
 
-            states, next_states, actions, rewards, dones = self.get_batch()
+            observations, next_states, actions, _, rewards, dones = self.get_batch()
 
-            action_q_values, _ = self.q_network(states)
+            action_q_values, _ = self.q_network(observations)
             next_action_q_values, _ = self.target_network(next_states)
 
             q_value = action_q_values.sum(dim=1, keepdim=True)
@@ -56,12 +59,13 @@ class DqnAgent:
 
     def get_batch(self):
         batch = self.replay_buffer.sample()
-        states, next_states, actions, rewards, dones  = zip(*batch)
+        observations, next_states, actions, action_qs, rewards, dones  = zip(*batch)
 
         return (
-            torch.stack(states),
+            torch.stack(observations),
             torch.stack(next_states),
             torch.stack(actions),
+            torch.stack(action_qs),
             torch.stack(rewards),
             torch.stack(dones)
         )

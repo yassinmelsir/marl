@@ -10,12 +10,12 @@ from src.networks.state_critic import StateCritic
 
 
 class Maa2cAgent(Ia2cAgent):
-    def __init__(self, n_agents, obs_dim, action_dim, hidden_dim, lr, gamma, eps_clip, K_epochs, entropy_coefficient):
-        super().__init__(n_agents, obs_dim, action_dim, hidden_dim, lr, gamma, eps_clip, K_epochs, entropy_coefficient)
+    def __init__(self, n_agents, obs_dim, action_dim, hidden_dim, learning_rate, gamma, epsilon, K_epochs, entropy_coefficient):
+        super().__init__(n_agents, obs_dim, action_dim, hidden_dim, learning_rate, gamma, epsilon, K_epochs, entropy_coefficient)
         self.a2c_agents = []
         self.memories = []
         self.centralized_critic = StateCritic(obs_dim=obs_dim, hidden_dim=hidden_dim)
-        self.centralized_critic_optimizer = optim.Adam(self.centralized_critic.parameters(), lr=lr)
+        self.centralized_critic_optimizer = optim.Adam(self.centralized_critic.parameters(), lr=learning_rate)
         for _ in range(n_agents):
             actor = StochasticActor(obs_dim=obs_dim, action_dim=action_dim, hidden_dim=hidden_dim)
             memory = Memory()
@@ -23,9 +23,9 @@ class Maa2cAgent(Ia2cAgent):
                 actor=actor,
                 critic=self.centralized_critic,
                 memory=memory,
-                lr=lr,
+                learning_rate=learning_rate,
                 gamma=gamma,
-                eps_clip=eps_clip,
+                epsilon=epsilon,
                 K_epochs=K_epochs,
                 entropy_coefficient=entropy_coefficient
             )

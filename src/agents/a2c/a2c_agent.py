@@ -8,17 +8,17 @@ from src.common.memory import Memory
 
 
 class A2cAgent:
-    def __init__(self, actor: nn.Module, critic: nn.Module, memory: Memory, lr: float, gamma: float, eps_clip: float, K_epochs: int, entropy_coefficient: float):
+    def __init__(self, actor: nn.Module, critic: nn.Module, memory: Memory, learning_rate: float, gamma: float, epsilon: float, K_epochs: int, entropy_coefficient: float):
         self.actor = actor
-        self.actor_optimizer = optim.Adam(self.actor.parameters(), lr=lr)
+        self.actor_optimizer = optim.Adam(self.actor.parameters(), lr=learning_rate)
 
         self.critic = critic
-        self.critic_optimizer = optim.Adam(self.critic.parameters(), lr=lr)
+        self.critic_optimizer = optim.Adam(self.critic.parameters(), lr=learning_rate)
 
         self.memory = memory
 
         self.gamma = gamma
-        self.eps_clip = eps_clip
+        self.epsilon = epsilon
         self.K_epochs = K_epochs
         self.entropy_coefficient = entropy_coefficient
 

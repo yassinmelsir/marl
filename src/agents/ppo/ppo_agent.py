@@ -6,17 +6,17 @@ from src.common.memory import Memory
 
 
 class PpoAgent:
-    def __init__(self, actor: nn.Module, critic: nn.Module, memory: Memory, lr: float, gamma: float, eps_clip: float, K_epochs: int):
+    def __init__(self, actor: nn.Module, critic: nn.Module, memory: Memory, learning_rate: float, gamma: float, epsilon: float, K_epochs: int):
         self.actor = actor
-        self.actor_optimizer = optim.Adam(self.actor.parameters(), lr=lr)
+        self.actor_optimizer = optim.Adam(self.actor.parameters(), lr=learning_rate)
 
         self.critic = critic
-        self.critic_optimizer = optim.Adam(self.critic.parameters(), lr=lr)
+        self.critic_optimizer = optim.Adam(self.critic.parameters(), lr=learning_rate)
 
         self.memory = memory
 
         self.gamma = gamma
-        self.eps_clip = eps_clip
+        self.epsilon = epsilon
         self.K_epochs = K_epochs
 
     def select_action(self, observation):
@@ -51,7 +51,7 @@ class PpoAgent:
 
         ratios = torch.exp(new_log_probs - old_log_probs)
         surr1 = ratios * advantages
-        surr2 = torch.clamp(ratios, 1 - self.eps_clip, 1 + self.eps_clip) * advantages
+        surr2 = torch.clamp(ratios, 1 - self.epsilon, 1 + self.epsilon) * advantages
 
         actor_loss = -torch.min(surr1, surr2).mean()
 

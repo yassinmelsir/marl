@@ -7,7 +7,7 @@ from src.networks.state_critic import StateCritic
 
 
 class IppoAgent:
-    def __init__(self, n_agents, obs_dim, action_dim, hidden_dim, lr, gamma, eps_clip, K_epochs):
+    def __init__(self, n_agents, obs_dim, action_dim, hidden_dim, learning_rate, gamma, epsilon, K_epochs):
         self.ppo_agents = []
         for _ in range(n_agents):
             actor = StochasticActor(obs_dim=obs_dim, action_dim=action_dim, hidden_dim=hidden_dim)
@@ -17,9 +17,9 @@ class IppoAgent:
                 actor=actor,
                 critic=critic,
                 memory=memory,
-                lr=lr,
+                learning_rate=learning_rate,
                 gamma=gamma,
-                eps_clip=eps_clip,
+                epsilon=epsilon,
                 K_epochs=K_epochs
             )
             self.ppo_agents.append(ppo_agent)

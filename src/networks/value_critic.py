@@ -16,7 +16,7 @@ class ValueCritic(nn.Module):
             nn.Linear(hidden_dim, 1)
         )
 
-    def forward(self, state, actions):
-        x = torch.cat([state, actions], dim=-1)
+    def forward(self, observation, actions):
+        x = torch.cat([observation, actions], dim=-1)
         q_value = self.q_network(x)
         return q_value

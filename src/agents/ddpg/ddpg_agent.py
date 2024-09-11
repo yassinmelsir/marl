@@ -10,12 +10,12 @@ from src.common.replay_buffer import ReplayBuffer
 
 class DdpgAgent:
     def __init__(self, actor: nn.Module, critic: nn.Module, target_actor: nn.Module, target_critic: nn.Module,
-                 replay_buffer: ReplayBuffer, lr: float, gamma: float, eps_clip: float, K_epochs: int, noise_scale: Union[float, None]):
+                 replay_buffer: ReplayBuffer, learning_rate: float, gamma: float, epsilon: float, K_epochs: int, noise_scale: Union[float, None]):
         self.actor = actor
-        self.actor_optimizer = optim.Adam(self.actor.parameters(), lr=lr)
+        self.actor_optimizer = optim.Adam(self.actor.parameters(), lr=learning_rate)
 
         self.critic = critic
-        self.critic_optimizer = optim.Adam(self.critic.parameters(), lr=lr)
+        self.critic_optimizer = optim.Adam(self.critic.parameters(), lr=learning_rate)
 
         self.target_actor = target_actor
         self.target_critic = target_critic
@@ -23,7 +23,7 @@ class DdpgAgent:
         self.replay_buffer = replay_buffer
 
         self.gamma = gamma
-        self.eps_clip = eps_clip
+        self.epsilon = epsilon
         self.K_epochs = K_epochs
         self.noise_scale = noise_scale
 
@@ -45,9 +45,9 @@ class DdpgAgent:
         actor_loss.backward()
         self.actor_optimizer.step()
 
-    def update_critic(self, states, actions, rewards, next_states, dones):
+    def update_critic(self, observations, actions, rewards, next_states, dones):
 
-        predicted_q_values = self.critic(states, actions)
+        predicted_q_values = self.critic(observations, actions)
 
         next_actions = self.target_actor(next_states)
 
@@ -97,7 +97,7 @@ class DdpgAgent:
 
             for _ in range(self.K_epochs):
                 critic_loss = self.update_critic(
-                    states=observations,
+                    observations=observations,
                     actions=action_probs,
                     rewards=rewards,
                     next_states=next_observations,

@@ -3,8 +3,8 @@ import torch
 from collections import deque
 
 class ReplayBuffer:
-    def __init__(self, buffer_size, batch_size):
-        self.buffer = deque(maxlen=buffer_size)
+    def __init__(self, buffer_capacity, batch_size):
+        self.buffer = deque(maxlen=buffer_capacity)
         self.batch_size = batch_size
 
     def add(self, experience):

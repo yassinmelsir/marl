@@ -12,17 +12,17 @@ from src.networks.value_critic import ValueCritic
 
 
 class MaddpgAgent(IddpgAgent):
-    def __init__(self, n_agents: int, obs_dim: int, action_dim: int, hidden_dim: int, lr: float, gamma: float,
-                 eps_clip: float, K_epochs: int, buffer_size: int, batch_size: int, noise_scale: Union[float, None],
+    def __init__(self, n_agents: int, obs_dim: int, action_dim: int, hidden_dim: int, learning_rate: float, gamma: float,
+                 epsilon: float, K_epochs: int, buffer_capacity: int, batch_size: int, noise_scale: Union[float, None],
                  temperature: float):
-        super().__init__(n_agents, obs_dim, action_dim, hidden_dim, lr, gamma, eps_clip, K_epochs, buffer_size,
+        super().__init__(n_agents, obs_dim, action_dim, hidden_dim, learning_rate, gamma, epsilon, K_epochs, buffer_capacity,
                          batch_size, noise_scale, temperature)
         self.agents = []
         global_obs_dim = obs_dim * n_agents
         global_action_dim = action_dim * n_agents
         self.centralized_critic = ValueCritic(obs_dim=global_obs_dim, action_dim=global_action_dim,
                                               hidden_dim=hidden_dim)
-        self.centralized_critic_optimizer = optim.Adam(self.centralized_critic.parameters(), lr=lr)
+        self.centralized_critic_optimizer = optim.Adam(self.centralized_critic.parameters(), lr=learning_rate)
 
         self.centralized_target_critic = ValueCritic(obs_dim=global_obs_dim, action_dim=global_action_dim,
                                                      hidden_dim=hidden_dim)
@@ -30,16 +30,16 @@ class MaddpgAgent(IddpgAgent):
         for _ in range(n_agents):
             actor = GumbelActor(obs_dim=obs_dim, action_dim=action_dim, hidden_dim=hidden_dim)
             target_actor = GumbelActor(obs_dim=obs_dim, action_dim=action_dim, hidden_dim=hidden_dim)
-            replay_buffer = ReplayBuffer(buffer_size=buffer_size, batch_size=batch_size)
+            replay_buffer = ReplayBuffer(buffer_capacity=buffer_capacity, batch_size=batch_size)
             ddpg_agent = DdpgAgent(
                 actor=actor,
                 critic=self.centralized_critic,
                 target_actor=target_actor,
                 target_critic=self.centralized_target_critic,
                 replay_buffer=replay_buffer,
-                lr=lr,
+                learning_rate=learning_rate,
                 gamma=gamma,
-                eps_clip=eps_clip,
+                epsilon=epsilon,
                 K_epochs=K_epochs,
                 noise_scale=noise_scale,
             )

@@ -2,10 +2,10 @@ import torch.nn as nn
 
 
 class DeepQNetwork(nn.Module):
-    def __init__(self, state_dim, hidden_dim, hidden_output_dim, n_actions):
+    def __init__(self, obs_dim, hidden_dim, hidden_output_dim, n_actions):
         super().__init__()
         self.mlp_bottom = nn.Sequential(
-            nn.Linear(state_dim, hidden_dim),
+            nn.Linear(obs_dim, hidden_dim),
             nn.ReLU()
         )
         self.gru = nn.GRU(

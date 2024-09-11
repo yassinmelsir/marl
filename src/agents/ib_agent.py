@@ -8,9 +8,15 @@ from src.networks.value_critic import ValueCritic
 
 
 class IbAgent:
-    def __init__(self, buffer_size: int, batch_size: int):
+    def __init__(self, buffer_capacity: int, batch_size: int, action_dim: int, obs_dim: int, learning_rate: float, epsilon: float, gamma: float):
             self.agents = []
-            self.replay_buffer = ReplayBuffer(batch_size=batch_size, buffer_size=buffer_size)
+            self.replay_buffer = ReplayBuffer(batch_size=batch_size, buffer_capacity=buffer_capacity)
+            self.epsilon = epsilon
+            self.gamma = gamma
+            self.obs_dim = obs_dim
+            self.action_dim = action_dim
+            self.batch_size = batch_size
+            self.learning_rate = learning_rate
 
     def get_batch(self):
 
@@ -27,7 +33,7 @@ class IbAgent:
         )
 
     def step(self, env):
-        states = []
+        observations = []
         next_states = []
         rewards = []
         dones = []
@@ -41,7 +47,8 @@ class IbAgent:
             if termination or truncation:
                 return rewards, [True]
             else:
-                action, action_probs_tensor = self.agents[idx].select_action(observation=obs_tensor)
+                action_tuple = self.agents[idx].select_action(observation=obs_tensor)
+                action, action_probs_tensor = action_tuple
 
             env.step(action)
             next_observation = env.observe(agent_id)
@@ -51,7 +58,7 @@ class IbAgent:
             done_tensor = torch.BoolTensor([termination or truncation])
             reward_tensor = torch.FloatTensor([reward])
 
-            states.append(obs_tensor)
+            observations.append(obs_tensor)
             next_states.append(next_obs_tensor)
             actions.append(action_tensor)
             action_probs.append(action_probs_tensor)
@@ -69,7 +76,7 @@ class IbAgent:
 
             self.agents[idx].replay_buffer.add(experience)
 
-        states = torch.stack(states)
+        observations = torch.stack(observations)
         next_states = torch.stack(next_states)
         actions = torch.stack(actions)
         action_probs = torch.stack(action_probs)
@@ -77,7 +84,7 @@ class IbAgent:
         dones = torch.tensor(dones)
 
         experience = (
-            states,
+            observations,
             next_states,
             actions,
             action_probs,

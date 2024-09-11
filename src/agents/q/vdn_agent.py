@@ -10,16 +10,16 @@ from src.networks.deep_q_network import DeepQNetwork
 
 
 class VdnAgent(IdqnAgent):
-    def __init__(self, n_agents, state_dim, hidden_dim, hidden_output_dim, action_dim,
+    def __init__(self, n_agents, obs_dim, hidden_dim, hidden_output_dim, action_dim,
                  learning_rate, epsilon, gamma, buffer_capacity, batch_size):
-        super().__init__(n_agents, state_dim, hidden_dim, hidden_output_dim, action_dim,
+        super().__init__(n_agents, obs_dim, hidden_dim, hidden_output_dim, action_dim,
                          learning_rate, epsilon, gamma, buffer_capacity, batch_size)
         self.optimizer = None
         params = []
         self.agents = []
         for _ in range(n_agents):
-            q_network = DeepQNetwork(state_dim, hidden_dim, hidden_output_dim, action_dim)
-            replay_buffer = ReplayBuffer(batch_size=batch_size, buffer_size=buffer_capacity)
+            q_network = DeepQNetwork(obs_dim, hidden_dim, hidden_output_dim, action_dim)
+            replay_buffer = ReplayBuffer(batch_size=batch_size, buffer_capacity=buffer_capacity)
             agent = DqnAgent(
                 q_network=q_network,
                 target_q_network=None,
@@ -33,7 +33,7 @@ class VdnAgent(IdqnAgent):
             params.append(q_network.parameters())
 
         self.optimizer = torch.optim.Adam(params=itertools.chain(*params), lr=learning_rate)
-        self.replay_buffer = ReplayBuffer(batch_size=batch_size, buffer_size=buffer_capacity)
+        self.replay_buffer = ReplayBuffer(batch_size=batch_size, buffer_capacity=buffer_capacity)
 
         self.batch_size = batch_size
         self.epsilon = epsilon
@@ -47,10 +47,10 @@ class VdnAgent(IdqnAgent):
 
             q_values_batch, next_q_values_batch = [], []
             for i in range(len(observations)):
-                state, next_state = observations[i], next_observations[i]
+                observation, next_state = observations[i], next_observations[i]
                 q_values, next_q_values = [], []
-                for id in range(len(state)):
-                    action_q = self.agents[id].max_action_q_value(observation=state[id])
+                for id in range(len(observation)):
+                    action_q = self.agents[id].max_action_q_value(observation=observation[id])
                     next_action_q = self.agents[id].max_action_q_value(observation=next_state[id])
                     q_values.append(action_q)
                     next_q_values.append(next_action_q)
