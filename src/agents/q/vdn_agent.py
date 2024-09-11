@@ -1,60 +1,57 @@
+import itertools
+
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+from torch import optim
 
+from src.agents.q.dqn_agent import DqnAgent
 from src.common.replay_buffer import ReplayBuffer
 from src.networks.deep_q_network import DeepQNetwork
 
 class VdnAgent:
-    def __init__(self, n_agents, state_dim, hidden_dim, hidden_output_dim, n_actions,
+    def __init__(self, n_agents, state_dim, hidden_dim, hidden_output_dim, action_dim,
                  learning_rate, epsilon, gamma, buffer_capacity, batch_size):
-
-        self.agents = nn.ModuleList([
-            DeepQNetwork(
-                state_dim=state_dim,
-                hidden_dim=hidden_dim,
-                hidden_output_dim=hidden_output_dim,
-                n_actions=n_actions
+        self.optimizer = None
+        params = []
+        self.agents = []
+        for _ in range(n_agents):
+            q_network = DeepQNetwork(state_dim, hidden_dim, hidden_output_dim, action_dim)
+            target_q_network = DeepQNetwork(state_dim, hidden_dim, hidden_output_dim, action_dim)
+            target_q_network.load_state_dict(q_network.state_dict())
+            replay_buffer = ReplayBuffer(batch_size=batch_size, buffer_size=buffer_capacity)
+            agent = DqnAgent(
+                q_network=q_network,
+                target_q_network=target_q_network,
+                optimizer=self.optimizer,
+                replay_buffer=replay_buffer,
+                epsilon=epsilon,
+                gamma=gamma,
+                action_dim=action_dim
             )
-            for _ in range(n_agents)])
+            self.agents.append(agent)
+            params.append(q_network.parameters())
 
-        self.optimizer = torch.optim.Adam(params=self.agents.parameters(), lr=learning_rate)
-
-        for param in self.agents.parameters():
-            assert param.requires_grad, "Model parameters do not require gradients"
-
+        self.optimizer = torch.optim.Adam(params=itertools.chain(*params), lr=learning_rate)
         self.replay_buffer = ReplayBuffer(batch_size=batch_size, buffer_size=buffer_capacity)
+
         self.batch_size = batch_size
         self.epsilon = epsilon
         self.gamma = gamma
-        self.n_actions = n_actions
+        self.action_dim = action_dim
         self.n_agents = n_agents
-
-    def select_action(self, observation, id, random_possible=True):
-        if random_possible and torch.rand(1).item() < self.epsilon:
-            return torch.randint(0, self.n_actions, (1,)).item()
-        else:
-            with torch.no_grad():
-                action_q_values, _ = self.agents[int(id)](observation.unsqueeze(0))
-                return action_q_values.argmax().item()
-
-    def max_action_q_value(self, observation, id):
-        with torch.no_grad():
-            action_q_values, _ = self.agents[int(id)](observation.unsqueeze(0))
-            q_value = action_q_values.max()
-            return q_value
 
     def update(self):
         if self.replay_buffer.can_sample():
-            observations, next_observations, rewards, dones = self.get_batch()
+            observations, next_observations, actions, rewards, dones = self.get_batch()
 
             q_values_batch, next_q_values_batch = [], []
             for i in range(len(observations)):
                 state, next_state = observations[i], next_observations[i]
                 q_values, next_q_values = [], []
                 for id in range(len(state)):
-                    action_q = self.max_action_q_value(observation=state[id], id=id)
-                    next_action_q = self.max_action_q_value(observation=next_state[id], id=id)
+                    action_q = self.agents[id].max_action_q_value(observation=state[id])
+                    next_action_q = self.agents[id].max_action_q_value(observation=next_state[id])
                     q_values.append(action_q)
                     next_q_values.append(next_action_q)
 
@@ -82,11 +79,12 @@ class VdnAgent:
 
     def get_batch(self):
         batch = self.replay_buffer.sample()
-        observations, next_observations, rewards, dones = zip(*batch)
+        observations, next_observations, actions, rewards, dones = zip(*batch)
 
         return (
             torch.stack(observations),
             torch.stack(next_observations),
+            torch.stack(actions),
             torch.stack(rewards),
             torch.stack(dones)
         )
@@ -97,6 +95,7 @@ class VdnAgent:
         next_states = []
         rewards = []
         dones = []
+        actions = []
         for idx, agent_id in enumerate(env.agents):
             observation, reward, termination, truncation, _ = env.last()
             obs_tensor = torch.FloatTensor(observation)
@@ -104,28 +103,42 @@ class VdnAgent:
             if termination or truncation:
                 return rewards, [True]
             else:
-                action = self.select_action(observation=obs_tensor, id=idx)
+                action = self.agents[idx].select_action(state=obs_tensor)
 
             env.step(action)
             next_observation = env.observe(agent_id)
 
             next_obs_tensor = torch.FloatTensor(next_observation)
+            action_tensor = torch.IntTensor([action])
             done_tensor = torch.BoolTensor([termination or truncation])
             reward_tensor = torch.FloatTensor([reward])
 
             states.append(obs_tensor)
             next_states.append(next_obs_tensor)
+            actions.append(action_tensor)
             rewards.append(reward_tensor)
             dones.append(done_tensor)
 
+            experience = (
+                obs_tensor,
+                next_obs_tensor,
+                action_tensor,
+                reward_tensor,
+                done_tensor
+            )
+
+            self.agents[idx].replay_buffer.add(experience)
+
         states = torch.stack(states)
         next_states = torch.stack(next_states)
+        actions = torch.stack(actions)
         rewards = torch.tensor(rewards)
         dones = torch.tensor(dones)
 
         experience = (
             states,
             next_states,
+            actions,
             rewards,
             dones
         )

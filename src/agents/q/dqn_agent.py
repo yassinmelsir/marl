@@ -29,6 +29,12 @@ class DqnAgent:
                 action_q_values, _ = self.q_network(state)
                 return action_q_values.argmax().item()
 
+    def max_action_q_value(self, observation):
+        with torch.no_grad():
+            action_q_values, _ = self.q_network(observation.unsqueeze(0))
+            q_value = action_q_values.max()
+            return q_value
+
     def update(self):
         if self.replay_buffer.can_sample():
 

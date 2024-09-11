@@ -18,7 +18,7 @@ class VdnTest:
         state_dim=obs_dim,
         hidden_dim=128,
         hidden_output_dim=32,
-        n_actions=action_dim,
+        action_dim=action_dim,
         learning_rate=0.000001,
         epsilon=0.1,
         gamma=0.99,
