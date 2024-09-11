@@ -33,7 +33,6 @@ class TrainingEnvironment:
                 if timestep % update_timestep == 0:
                     self.agent.update()
                     timestep = 0
-
                 timestep_reward.append(np.array(rewards))
                 timestep += 1
 

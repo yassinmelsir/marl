@@ -1,26 +1,21 @@
-from typing import Union
-
 import torch
-from src.agents.ddpg.ddpg_agent import DdpgAgent
 from src.common.replay_buffer import ReplayBuffer
-from src.networks.gumbel_actor import GumbelActor
-from src.networks.value_critic import ValueCritic
 
 
 class IbAgent:
     def __init__(self, n_agents, obs_dim, action_dim, hidden_dim, learning_rate, gamma, epsilon, buffer_capacity,
-                         batch_size):
+                 batch_size):
 
-            self.agents = []
-            self.n_agents = n_agents
-            self.hidden_dim = hidden_dim
-            self.replay_buffer = ReplayBuffer(batch_size=batch_size, buffer_capacity=buffer_capacity)
-            self.epsilon = epsilon
-            self.gamma = gamma
-            self.obs_dim = obs_dim
-            self.action_dim = action_dim
-            self.batch_size = batch_size
-            self.learning_rate = learning_rate
+        self.agents = []
+        self.n_agents = n_agents
+        self.hidden_dim = hidden_dim
+        self.replay_buffer = ReplayBuffer(batch_size=batch_size, buffer_capacity=buffer_capacity)
+        self.epsilon = epsilon
+        self.gamma = gamma
+        self.obs_dim = obs_dim
+        self.action_dim = action_dim
+        self.batch_size = batch_size
+        self.learning_rate = learning_rate
 
     def get_batch(self):
 
@@ -38,7 +33,7 @@ class IbAgent:
 
     def step(self, env):
         observations = []
-        next_states = []
+        next_observations = []
         rewards = []
         dones = []
         actions = []
@@ -63,7 +58,7 @@ class IbAgent:
             reward_tensor = torch.FloatTensor([reward])
 
             observations.append(obs_tensor)
-            next_states.append(next_obs_tensor)
+            next_observations.append(next_obs_tensor)
             actions.append(action_tensor)
             action_probs.append(action_probs_tensor)
             rewards.append(reward_tensor)
@@ -81,7 +76,7 @@ class IbAgent:
             self.agents[idx].replay_buffer.add(experience)
 
         observations = torch.stack(observations)
-        next_states = torch.stack(next_states)
+        next_observations = torch.stack(next_observations)
         actions = torch.stack(actions)
         action_probs = torch.stack(action_probs)
         rewards = torch.tensor(rewards)
@@ -89,7 +84,7 @@ class IbAgent:
 
         experience = (
             observations,
-            next_states,
+            next_observations,
             actions,
             action_probs,
             rewards,

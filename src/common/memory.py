@@ -1,16 +1,16 @@
 class Memory:
     def __init__(self):
-        self.actions = []
         self.observations = []
-        self.log_probs = []
+        self.next_observations = []
+        self.actions = []
+        self.action_probs = []
         self.rewards = []
         self.dones = []
-        self.next_observations = []
 
     def clear_memory(self):
-        del self.actions[:]
         del self.observations[:]
-        del self.log_probs[:]
+        del self.next_observations[:]
+        del self.actions[:]
+        del self.action_probs[:]
         del self.rewards[:]
         del self.dones[:]
-        del self.next_observations[:]

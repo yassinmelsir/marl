@@ -45,13 +45,13 @@ class DdpgAgent:
         actor_loss.backward()
         self.actor_optimizer.step()
 
-    def update_critic(self, observations, actions, rewards, next_states, dones):
+    def update_critic(self, observations, actions, rewards, next_observations, dones):
 
         predicted_q_values = self.critic(observations, actions)
 
-        next_actions = self.target_actor(next_states)
+        next_actions = self.target_actor(next_observations)
 
-        target_q_values = self.target_critic(next_states, next_actions).detach()
+        target_q_values = self.target_critic(next_observations, next_actions).detach()
 
         adjusted_target_q_values = rewards + self.gamma * (1 - dones.float()) * target_q_values
 
@@ -100,7 +100,7 @@ class DdpgAgent:
                     observations=observations,
                     actions=action_probs,
                     rewards=rewards,
-                    next_states=next_observations,
+                    next_observations=next_observations,
                     dones=dones
                 )
                 self.update_actor(observations)

@@ -1,29 +1,34 @@
+from typing import Union
+
 import torch
 
 from src.agents.a2c.a2c_agent import A2cAgent
+from src.agents.ddpg.ddpg_agent import DdpgAgent
+from src.agents.ppo.ppo_agent import PpoAgent
+from src.agents.q.dqn_agent import DqnAgent
 from src.common.memory import Memory
 from src.networks.stochastic_actor import StochasticActor
 from src.networks.state_critic import StateCritic
 
 
-class Ia2cAgent:
-    def __init__(self, n_agents, obs_dim, action_dim, hidden_dim, learning_rate, gamma, epsilon, K_epochs, entropy_coefficient):
+class ImAgent:
+    def __init__(self, n_agents, obs_dim, action_dim, hidden_dim, learning_rate, gamma, epsilon, K_epochs):
         self.agents = []
         for _ in range(n_agents):
             actor = StochasticActor(obs_dim=obs_dim, action_dim=action_dim, hidden_dim=hidden_dim)
             critic = StateCritic(obs_dim=obs_dim, hidden_dim=hidden_dim)
             memory = Memory()
-            agent = A2cAgent(
+            agent = PpoAgent(
                 actor=actor,
                 critic=critic,
                 memory=memory,
                 learning_rate=learning_rate,
                 gamma=gamma,
                 epsilon=epsilon,
-                K_epochs=K_epochs,
-                entropy_coefficient=entropy_coefficient
+                K_epochs=K_epochs
             )
             self.agents.append(agent)
+
 
     def step(self, env):
         rewards = []
@@ -53,11 +58,10 @@ class Ia2cAgent:
             self.agents[i].memory.dones.append(done)
 
 
-            dones.append(termination or truncation)
+            dones.append(done)
             rewards.append(reward)
 
-
-        return rewards, dones
+        return torch.stack(rewards), torch.stack(dones)
 
     def update(self):
         for idx, agent in enumerate(self.agents):
@@ -66,3 +70,4 @@ class Ia2cAgent:
 
     def get_memories(self):
         return [agent.memory for agent in self.agents]
+
