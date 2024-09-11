@@ -32,17 +32,16 @@ class DqnAgent:
     def update(self):
         if self.replay_buffer.can_sample():
 
-            states, actions, rewards, next_states, dones = self.get_batch()
+            states, next_states, actions, rewards, dones = self.get_batch()
 
             action_q_values, _ = self.q_network(states)
             next_action_q_values, _ = self.target_network(next_states)
 
-            q_value = action_q_values.gather(1, actions.unsqueeze(1)).squeeze(1)
-            next_q_value = next_action_q_values.max(1)[0]
-            expected_q_value = rewards + self.gamma * next_q_value * (1 - dones)
+            q_value = action_q_values.sum(dim=1, keepdim=True)
+            next_q_value = next_action_q_values.sum(dim=1, keepdims=True)
+            expected_q_value = rewards + self.gamma * next_q_value * (1 - dones.float())
 
-
-            loss = nn.MSELoss()(q_value, expected_q_value.detach())
+            loss = nn.MSELoss()(q_value, expected_q_value)
 
             self.optimizer.zero_grad()
             loss.backward()
@@ -51,12 +50,12 @@ class DqnAgent:
 
     def get_batch(self):
         batch = self.replay_buffer.sample()
-        states, actions, rewards, next_states, dones  = zip(*batch)
+        states, next_states, actions, rewards, dones  = zip(*batch)
 
         return (
             torch.stack(states),
+            torch.stack(next_states),
             torch.stack(actions),
             torch.stack(rewards),
-            torch.stack(next_states),
             torch.stack(dones)
         )

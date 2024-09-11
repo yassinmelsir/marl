@@ -45,6 +45,7 @@ class IdqnAgent:
         next_states = []
         rewards = []
         dones = []
+        actions = []
         for idx, agent_id in enumerate(env.agents):
             observation, reward, termination, truncation, _ = env.last()
             obs_tensor = torch.FloatTensor(observation)
@@ -58,17 +59,20 @@ class IdqnAgent:
             next_observation = env.observe(agent_id)
 
             next_obs_tensor = torch.FloatTensor(next_observation)
+            action_tensor = torch.IntTensor([action])
             done_tensor = torch.BoolTensor([termination or truncation])
             reward_tensor = torch.FloatTensor([reward])
 
             states.append(obs_tensor)
             next_states.append(next_obs_tensor)
+            actions.append(action_tensor)
             rewards.append(reward_tensor)
             dones.append(done_tensor)
 
             experience = (
                 obs_tensor,
                 next_obs_tensor,
+                action_tensor,
                 reward_tensor,
                 done_tensor
             )
@@ -83,6 +87,7 @@ class IdqnAgent:
         experience = (
             states,
             next_states,
+            actions,
             rewards,
             dones
         )
