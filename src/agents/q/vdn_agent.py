@@ -1,9 +1,7 @@
 import itertools
 
 import torch
-import torch.nn as nn
 import torch.nn.functional as F
-from torch import optim
 
 from src.agents.q.dqn_agent import DqnAgent
 from src.agents.q.idqn_agent import IdqnAgent

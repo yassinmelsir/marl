@@ -12,7 +12,7 @@ from src.networks.mixing_network import MixingNetwork
 
 
 class QmixAgent(IdqnAgent):
-    def __init__(self, n_agents, embed_dim, mixing_state_dim,
+    def __init__(self, n_agents, mixing_hidden_dim, mixing_state_dim,
                  q_agent_state_dim, hidden_dim, hidden_output_dim, action_dim,
                  learning_rate, epsilon, gamma, buffer_capacity, batch_size):
         super().__init__(n_agents, q_agent_state_dim, hidden_dim, hidden_output_dim, action_dim,
@@ -21,7 +21,7 @@ class QmixAgent(IdqnAgent):
         self.mixing_network = MixingNetwork(
             n_agents=n_agents,
             state_dim=mixing_state_dim,
-            embed_dim=embed_dim
+            hidden_dim=mixing_hidden_dim
         )
 
         self.optimizer = None
