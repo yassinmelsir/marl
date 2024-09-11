@@ -1,8 +1,8 @@
 from src.agents.ppo.ippo_agent import IppoAgent
-from src.tests.common.common import LoopParams
-from src.tests.common.simple_spread import SimpleSpreadParams
-from src.tests.ppo.common import PpoParams
-from src.tests.ppo.ppo_test import PpoTest
+from src.environment.common.common import LoopParams
+from src.environment.common.simple_spread import SimpleSpreadParams
+from src.environment.ppo.common import PpoParams
+from src.environment.ppo.ppo_test import PpoTest
 
 if __name__ == '__main__':
     loop_params = LoopParams(max_episodes=100, max_timesteps=1000, update_timestep=100)

@@ -25,13 +25,13 @@ class IppoAgent:
             self.ppo_agents.append(ppo_agent)
 
     def step(self, env):
-        dones = []
+        rewards, dones  = [], []
         for i, agent_id in enumerate(env.agents):
             observation, reward, termination, truncation, _ = env.last()
             obs_tensor = torch.FloatTensor(observation).unsqueeze(0)
 
             if termination or truncation:
-                return [True]
+                return rewards, [True]
             else:
                 action, log_prob = self.ppo_agents[i].select_action(obs_tensor)
                 log_prob = log_prob.squeeze()
@@ -54,7 +54,7 @@ class IppoAgent:
 
             dones.append(termination or truncation)
 
-        return dones
+        return rewards, dones
 
     def update(self):
         for idx, agent in enumerate(self.ppo_agents):

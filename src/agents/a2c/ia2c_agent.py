@@ -27,11 +27,12 @@ class Ia2cAgent:
 
     def step(self, env):
         dones = []
+        rewards = []
         for i, agent_id in enumerate(env.agents):
             observation, reward, termination, truncation, _ = env.last()
 
             if termination or truncation:
-                return [True]
+                return rewards, [True]
             else:
                 action, log_prob = self.a2c_agents[i].select_action(torch.FloatTensor(observation).unsqueeze(0))
                 log_prob = log_prob.squeeze()
@@ -50,8 +51,9 @@ class Ia2cAgent:
             self.a2c_agents[i].memory.next_observations.append(next_observation)
 
             dones.append(termination or truncation)
+            rewards.append(reward)
 
-        return dones
+        return rewards, dones
 
     def update(self):
         for idx, agent in enumerate(self.a2c_agents):

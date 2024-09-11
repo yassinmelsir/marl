@@ -1,7 +1,7 @@
 from src.agents.q.qmix_agent import QmixAgent
-from src.tests.common.common import LoopParams
-from src.tests.common.simple_spread import SimpleSpread, SimpleSpreadParams
-from src.tests.dqn.dqn_test import DqnTest
+from src.environment.common.common import LoopParams
+from src.environment.common.simple_spread import SimpleSpread, SimpleSpreadParams
+from src.environment.dqn.training_environment import DqnTest
 
 if __name__ == "__main__":
     simple_spread_params = SimpleSpreadParams(n=3, local_ratio=0.5, max_cycles=25)

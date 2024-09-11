@@ -1,12 +1,9 @@
 import numpy as np
-import torch
 
-from src.tests.common.common import LoopParams
-from src.tests.common.simple_spread import SimpleSpread, SimpleSpreadParams
-from src.tests.ddpg.common import DdpgParams
+from src.environment.common import LoopParams
 
 
-class DqnTest:
+class TrainingEnvironment:
     def __init__(self, env_instance, agent, loop_params: LoopParams):
         self.loop_params = loop_params
         self.agent = agent

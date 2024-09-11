@@ -1,8 +1,8 @@
 from src.agents.a2c.maa2c_agent import Maa2cAgent
-from src.tests.common.common import LoopParams
-from src.tests.common.simple_spread import SimpleSpreadParams
-from src.tests.a2c.common import A2cParams
-from src.tests.a2c.a2c_test import A2cTest
+from src.environment.common.common import LoopParams
+from src.environment.common.simple_spread import SimpleSpreadParams
+from src.environment.tests.common import A2cParams
+from src.environment.tests.a2c_test import A2cTest
 
 if __name__ == '__main__':
     loop_params = LoopParams(max_episodes=100, max_timesteps=1000, update_timestep=100)
