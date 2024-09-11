@@ -12,15 +12,20 @@ from src.networks.value_critic import ValueCritic
 
 
 class MaddpgAgent(IddpgAgent):
-    def __init__(self, n_agents: int, obs_dim: int, action_dim: int, hidden_dim: int, lr: float, gamma: float, eps_clip: float, K_epochs: int, buffer_size: int, batch_size: int, noise_scale: Union[float, None], temperature: float):
-        super().__init__(n_agents, obs_dim, action_dim, hidden_dim, lr, gamma, eps_clip, K_epochs, buffer_size, batch_size, noise_scale,  temperature)
-        self.ddpg_agents = []
+    def __init__(self, n_agents: int, obs_dim: int, action_dim: int, hidden_dim: int, lr: float, gamma: float,
+                 eps_clip: float, K_epochs: int, buffer_size: int, batch_size: int, noise_scale: Union[float, None],
+                 temperature: float):
+        super().__init__(n_agents, obs_dim, action_dim, hidden_dim, lr, gamma, eps_clip, K_epochs, buffer_size,
+                         batch_size, noise_scale, temperature)
+        self.agents = []
         global_obs_dim = obs_dim * n_agents
         global_action_dim = action_dim * n_agents
-        self.centralized_critic = ValueCritic(obs_dim=global_obs_dim, action_dim=global_action_dim, hidden_dim=hidden_dim)
+        self.centralized_critic = ValueCritic(obs_dim=global_obs_dim, action_dim=global_action_dim,
+                                              hidden_dim=hidden_dim)
         self.centralized_critic_optimizer = optim.Adam(self.centralized_critic.parameters(), lr=lr)
 
-        self.centralized_target_critic = ValueCritic(obs_dim=global_obs_dim, action_dim=global_action_dim, hidden_dim=hidden_dim)
+        self.centralized_target_critic = ValueCritic(obs_dim=global_obs_dim, action_dim=global_action_dim,
+                                                     hidden_dim=hidden_dim)
 
         for _ in range(n_agents):
             actor = GumbelActor(obs_dim=obs_dim, action_dim=action_dim, hidden_dim=hidden_dim)
@@ -38,30 +43,45 @@ class MaddpgAgent(IddpgAgent):
                 K_epochs=K_epochs,
                 noise_scale=noise_scale,
             )
-            self.ddpg_agents.append(ddpg_agent)
+            self.agents.append(ddpg_agent)
 
         self.gamma = gamma
         self.n_agents = n_agents
         self.obs_dim = obs_dim
         self.action_dim = action_dim
 
+    def reshaped_batch_item_by_agent(self, batch, dim):
+        return batch.view(batch.size(0), self.n_agents, dim)
+
+    def cat_batch_item_to_global(self, batch, dim):
+        return batch.view(-1, self.n_agents * dim)
+
+    def get_action_probs(self, obs):
+        action_probs = []
+        for idx, agent in enumerate(self.agents):
+            agent_obs = obs[:, idx, :]
+            action_ps = agent.target_actor(agent_obs)
+            action_probs.append(action_ps)
+
+        return torch.stack(action_probs)
+
+    def get_predicted_q_values(self, observations, action_probs):
+        cat_obs = self.cat_batch_item_to_global(observations, dim=self.obs_dim)
+        cat_action_probs = self.cat_batch_item_to_global(action_probs, dim=self.action_dim)
+
+        return self.centralized_critic(cat_obs, cat_action_probs)
+
     def update_centralized_critic(self, observations, next_observations, action_probs, rewards, dones):
 
-        predicted_q_values = self.centralized_critic(observations, action_probs)
+        predicted_q_values = self.get_predicted_q_values(observations=observations, action_probs=action_probs)
 
+        next_action_probs = self.get_action_probs(obs=next_observations)
+        cat_next_obs = self.cat_batch_item_to_global(next_observations, dim=self.obs_dim)
+        cat_action_probs = self.cat_batch_item_to_global(next_action_probs, dim=self.action_dim)
 
-        next_actions = []
-        reshaped_next_obs = next_observations.view(next_observations.size(0), self.n_agents, self.obs_dim)
-        for idx, agent in enumerate(self.agents):
-            agent_next_obs = reshaped_next_obs[:, idx, :]
-            next_action = agent.target_actor(agent_next_obs)
-            next_actions.append(next_action)
-
-        global_next_actions = torch.cat(next_actions, dim=-1)
-
-        combined_next_input = torch.cat([next_observations.view(next_observations.size(0), -1), global_next_actions],
-                                        dim=-1)
-        target_q_values = self.centralized_target_critic(combined_next_input).detach()
+        target_q_values = self.centralized_target_critic(cat_next_obs, cat_action_probs)
+        rewards = rewards.sum(dim=1, keepdim=True)
+        dones = dones.float().sum(dim=1, keepdim=True)
 
         target_q_values = rewards + self.gamma * (1 - dones) * target_q_values
 
@@ -83,14 +103,7 @@ class MaddpgAgent(IddpgAgent):
 
         global_obs, global_next_obs, global_actions, global_action_probs, global_rewards, global_dones = self.get_batch()
 
-        global_obs = global_obs.view(-1, self.n_agents * self.obs_dim)
-        global_next_obs = global_next_obs.view(-1, self.n_agents * self.obs_dim)
-
-        global_action_probs = global_action_probs.view(-1, self.n_agents * self.action_dim)
-        global_rewards = global_rewards.sum(dim=0)
-        global_dones = global_dones.sum(dim=0)
-
-        global_observation_values = self.update_centralized_critic(
+        _ = self.update_centralized_critic(
             observations=global_obs,
             next_observations=global_next_obs,
             action_probs=global_action_probs,
@@ -98,15 +111,13 @@ class MaddpgAgent(IddpgAgent):
             dones=global_dones,
         )
 
-        reshaped_global_obs = global_obs.view(global_obs.size(0), self.n_agents, self.obs_dim)
-        for idx, agent in enumerate(self.ddpg_agents):
-            agent_obs = reshaped_global_obs[:, idx, :]
-            agent.update_actor(
-                observations=agent_obs,
-            )
+        for idx, agent in enumerate(self.agents):
+            predicted_q_values = self.get_predicted_q_values(observations=global_obs, action_probs=global_action_probs)
+            actor_loss = -predicted_q_values.mean()
+            agent.actor_optimizer.zero_grad()
+            actor_loss.backward()
+            agent.actor_optimizer.step()
 
         self.soft_update(self.centralized_target_critic, self.centralized_critic)
-        for agent in self.ddpg_agents:
+        for agent in self.agents:
             agent.soft_update_critic(tau=0.001)
-
-
