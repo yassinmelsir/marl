@@ -10,22 +10,21 @@ from src.agents.q.idqn_agent import IdqnAgent
 from src.common.replay_buffer import ReplayBuffer
 from src.networks.deep_q_network import DeepQNetwork
 
+
 class VdnAgent(IdqnAgent):
     def __init__(self, n_agents, state_dim, hidden_dim, hidden_output_dim, action_dim,
                  learning_rate, epsilon, gamma, buffer_capacity, batch_size):
         super().__init__(n_agents, state_dim, hidden_dim, hidden_output_dim, action_dim,
-                 learning_rate, epsilon, gamma, buffer_capacity, batch_size)
+                         learning_rate, epsilon, gamma, buffer_capacity, batch_size)
         self.optimizer = None
         params = []
         self.agents = []
         for _ in range(n_agents):
             q_network = DeepQNetwork(state_dim, hidden_dim, hidden_output_dim, action_dim)
-            target_q_network = DeepQNetwork(state_dim, hidden_dim, hidden_output_dim, action_dim)
-            target_q_network.load_state_dict(q_network.state_dict())
             replay_buffer = ReplayBuffer(batch_size=batch_size, buffer_size=buffer_capacity)
             agent = DqnAgent(
                 q_network=q_network,
-                target_q_network=target_q_network,
+                target_q_network=None,
                 optimizer=self.optimizer,
                 replay_buffer=replay_buffer,
                 epsilon=epsilon,
@@ -62,7 +61,7 @@ class VdnAgent(IdqnAgent):
                 next_q_values_batch.append(torch.tensor(next_q_values, dtype=torch.float32, requires_grad=True))
 
             q_values_batch = torch.stack(q_values_batch).reshape(self.batch_size, -1)
-            next_q_values_batch = torch.stack(next_q_values_batch).reshape(self.batch_size,-1)
+            next_q_values_batch = torch.stack(next_q_values_batch).reshape(self.batch_size, -1)
 
             global_q_value = q_values_batch.sum(dim=1, keepdim=True)
             next_global_q_value = next_q_values_batch.sum(dim=1, keepdim=True)

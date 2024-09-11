@@ -1,6 +1,5 @@
-import numpy as np
 import torch
-from torch import optim, nn
+from torch import optim
 from src.agents.q.dqn_agent import DqnAgent
 from src.common.replay_buffer import ReplayBuffer
 from src.networks.deep_q_network import DeepQNetwork
