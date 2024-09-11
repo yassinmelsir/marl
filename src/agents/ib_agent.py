@@ -8,8 +8,12 @@ from src.networks.value_critic import ValueCritic
 
 
 class IbAgent:
-    def __init__(self, buffer_capacity: int, batch_size: int, action_dim: int, obs_dim: int, learning_rate: float, epsilon: float, gamma: float):
+    def __init__(self, n_agents, obs_dim, action_dim, hidden_dim, learning_rate, gamma, epsilon, buffer_capacity,
+                         batch_size):
+
             self.agents = []
+            self.n_agents = n_agents
+            self.hidden_dim = hidden_dim
             self.replay_buffer = ReplayBuffer(batch_size=batch_size, buffer_capacity=buffer_capacity)
             self.epsilon = epsilon
             self.gamma = gamma

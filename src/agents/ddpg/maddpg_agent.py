@@ -1,20 +1,17 @@
-from typing import Union
-
 import torch
 from torch import optim
 import torch.nn.functional as F
 
-from src.agents.ddpg.iddpg_agent import IddpgAgent
 from src.agents.ddpg.ddpg_agent import DdpgAgent
+from src.agents.ddpg.iddpg_agent import IddpgAgent
 from src.common.replay_buffer import ReplayBuffer
 from src.networks.gumbel_actor import GumbelActor
 from src.networks.value_critic import ValueCritic
 
 
 class MaddpgAgent(IddpgAgent):
-    def __init__(self, n_agents: int, obs_dim: int, action_dim: int, hidden_dim: int, learning_rate: float, gamma: float,
-                 epsilon: float, K_epochs: int, buffer_capacity: int, batch_size: int, noise_scale: Union[float, None],
-                 temperature: float):
+    def __init__(self, n_agents, obs_dim, action_dim, hidden_dim, learning_rate, gamma, epsilon, K_epochs, buffer_capacity,
+                         batch_size, noise_scale, temperature):
         super().__init__(n_agents, obs_dim, action_dim, hidden_dim, learning_rate, gamma, epsilon, K_epochs, buffer_capacity,
                          batch_size, noise_scale, temperature)
         self.agents = []
@@ -31,7 +28,7 @@ class MaddpgAgent(IddpgAgent):
             actor = GumbelActor(obs_dim=obs_dim, action_dim=action_dim, hidden_dim=hidden_dim)
             target_actor = GumbelActor(obs_dim=obs_dim, action_dim=action_dim, hidden_dim=hidden_dim)
             replay_buffer = ReplayBuffer(buffer_capacity=buffer_capacity, batch_size=batch_size)
-            ddpg_agent = DdpgAgent(
+            agent = DdpgAgent(
                 actor=actor,
                 critic=self.centralized_critic,
                 target_actor=target_actor,
@@ -43,7 +40,7 @@ class MaddpgAgent(IddpgAgent):
                 K_epochs=K_epochs,
                 noise_scale=noise_scale,
             )
-            self.agents.append(ddpg_agent)
+            self.agents.append(agent)
 
         self.gamma = gamma
         self.n_agents = n_agents

@@ -10,10 +10,10 @@ from src.networks.deep_q_network import DeepQNetwork
 
 
 class VdnAgent(IdqnAgent):
-    def __init__(self, n_agents, obs_dim, hidden_dim, hidden_output_dim, action_dim,
-                 learning_rate, epsilon, gamma, buffer_capacity, batch_size):
-        super().__init__(n_agents, obs_dim, hidden_dim, hidden_output_dim, action_dim,
-                         learning_rate, epsilon, gamma, buffer_capacity, batch_size)
+    def __init__(self, hidden_output_dim, n_agents, obs_dim, action_dim, hidden_dim, learning_rate, gamma, epsilon, buffer_capacity,
+                         batch_size):
+        super().__init__(hidden_output_dim, n_agents, obs_dim, action_dim, hidden_dim, learning_rate, gamma, epsilon, buffer_capacity,
+                         batch_size)
         self.optimizer = None
         params = []
         self.agents = []
@@ -43,7 +43,7 @@ class VdnAgent(IdqnAgent):
 
     def update(self):
         if self.replay_buffer.can_sample():
-            observations, next_observations, actions, rewards, dones = self.get_batch()
+            observations, next_observations, actions, action_qs, rewards, dones = self.get_batch()
 
             q_values_batch, next_q_values_batch = [], []
             for i in range(len(observations)):

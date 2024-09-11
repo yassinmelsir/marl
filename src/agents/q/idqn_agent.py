@@ -1,6 +1,5 @@
 import torch
 from torch import optim
-
 from src.agents.ib_agent import IbAgent
 from src.agents.q.dqn_agent import DqnAgent
 from src.common.replay_buffer import ReplayBuffer
@@ -8,8 +7,10 @@ from src.networks.deep_q_network import DeepQNetwork
 
 
 class IdqnAgent(IbAgent):
-    def __init__(self, buffer_capacity, batch_size, n_agents, action_dim, obs_dim, hidden_dim, hidden_output_dim, learning_rate, epsilon, gamma):
-        super().__init__(buffer_capacity, batch_size, action_dim, obs_dim, learning_rate, epsilon, gamma)
+    def __init__(self, hidden_output_dim, n_agents, obs_dim, action_dim, hidden_dim, learning_rate, gamma, epsilon, buffer_capacity,
+                         batch_size):
+        super().__init__(n_agents, obs_dim, action_dim, hidden_dim, learning_rate, gamma, epsilon, buffer_capacity,
+                         batch_size)
         for _ in range(n_agents):
             q_network = DeepQNetwork(obs_dim, hidden_dim, hidden_output_dim, action_dim)
             target_q_network = DeepQNetwork(obs_dim, hidden_dim, hidden_output_dim, action_dim)

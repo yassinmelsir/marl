@@ -53,7 +53,7 @@ class QmixAgent(IdqnAgent):
 
     def update(self):
         if self.replay_buffer.can_sample():
-            observations, next_observations, actions, rewards, dones = self.get_batch()
+            observations, next_observations, actions, action_qs, rewards, dones = self.get_batch()
 
             q_values_batch, next_q_values_batch = [], []
             for i in range(len(observations)):
