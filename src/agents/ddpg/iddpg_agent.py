@@ -63,7 +63,6 @@ class IddpgAgent:
                 done_tensor,
             )
 
-            assert len(experience) == 6
 
             self.ddpg_agents[i].replay_buffer.add(experience)
 
