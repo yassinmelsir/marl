@@ -1,7 +1,6 @@
 import torch
 from torch import nn
 
-
 class Hypernetwork(nn.Module):
     def __init__(self, state_dim, hidden_dim, n_agents):
         super().__init__()

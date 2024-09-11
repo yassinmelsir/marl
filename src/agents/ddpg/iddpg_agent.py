@@ -1,3 +1,5 @@
+from typing import Union
+
 import torch
 from src.agents.ddpg.ddpg_agent import DdpgAgent
 from src.common.replay_buffer import ReplayBuffer
@@ -8,7 +10,7 @@ from src.networks.value_critic import ValueCritic
 class IddpgAgent:
     def __init__(
             self, n_agents: int, obs_dim: int, action_dim: int, hidden_dim: int, lr: float, gamma: float,
-            eps_clip: float, K_epochs: int, buffer_size: int, batch_size: int, noise_scale: float, temperature: float
+            eps_clip: float, K_epochs: int, buffer_size: int, batch_size: int, noise_scale: Union[float, None], temperature: float
     ):
         self.ddpg_agents = []
         for _ in range(n_agents):

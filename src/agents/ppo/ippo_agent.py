@@ -53,6 +53,7 @@ class IppoAgent:
             self.ppo_agents[i].memory.dones.append(done)
 
             dones.append(termination or truncation)
+            rewards.append(reward)
 
         return rewards, dones
 
