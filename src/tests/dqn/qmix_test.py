@@ -1,55 +1,74 @@
-from pettingzoo.mpe import simple_spread_v3
-from src.coop.qmix.qmix_agent import QmixAgent
-from src.tests.common import get_obs_action_size
+import numpy as np
+from src.agents.q.qmix_agent import QmixAgent
+from src.tests.common.common import LoopParams
+from src.tests.common.simple_spread import SimpleSpread, SimpleSpreadParams
 
+class QmixTest:
+    def __init__(self, simple_spread_params: SimpleSpreadParams, loop_params: LoopParams):
+        self.loop_params = loop_params
 
-def main(num_episodes, max_steps_per_episode, visualize=False):
-    env = simple_spread_v3.env(N=3, local_ratio=0.5, max_cycles=max_steps_per_episode)
-    env.reset()
+        self.simple_spread = SimpleSpread(params=simple_spread_params)
+        self.simple_spread.reset()
 
-    obs_size, action_size = get_obs_action_size(env=env)
+        obs_dim, action_dim, n_agents = \
+            self.simple_spread.obs_size, self.simple_spread.action_size, self.simple_spread.n_agents
 
-    agent = QmixAgent(
-        n_agents=len(env.agents),
-        embed_dim=256,
-        mixing_state_dim=obs_size * len(env.agents),
-        q_agent_state_dim=obs_size,
-        hidden_dim=128,
-        hidden_output_dim=32,
-        n_actions=action_size,
-        learning_rate=0.000001,
-        epsilon=0.1,
-        gamma=0.99,
-        buffer_capacity=10000,
-        batch_size=20,
-    )
+        self.agent = QmixAgent(
+            n_agents=n_agents,
+            embed_dim=256,
+            mixing_state_dim=obs_dim * n_agents,
+            q_agent_state_dim=obs_dim,
+            hidden_dim=128,
+            hidden_output_dim=32,
+            n_actions=action_dim,
+            learning_rate=0.000001,
+            epsilon=0.1,
+            gamma=0.99,
+            buffer_capacity=10000,
+            batch_size=20,
+        )
 
-    for episode in range(num_episodes):
-        env.reset()
-        total_reward = 0
-        step = 0
+    def get_rewards(self, total_reward):
+        return np.mean([np.sum(rwds) for rwds in total_reward])
 
-        while step < max_steps_per_episode:
-            rewards, dones = agent.step(env=env, step=step)
+    def main(self):
 
-            loss = agent.update()
+        timestep = 0
+        total_reward = []
+        for episode in range(self.loop_params.max_episodes):
+            self.simple_spread.reset()
+            timestep_reward = []
+            for t in range(self.loop_params.max_timesteps):
+                env = self.simple_spread.get_env()
+                rewards, dones = self.agent.step(env=env)
 
-            total_reward += sum(rewards)
-            step += 1
+                if all(dones):
+                    break
 
-            if loss is not None:
-                print(f"Episode {episode + 1}, Step {step + 1}, Total Reward: {total_reward}, Loss: {loss:.4f}")
-            else:
-                print(f"Episode {episode + 1}, Step {step + 1}, Total Reward: {total_reward}")
+                if timestep % self.loop_params.update_timestep == 0:
+                    self.agent.update()
+                    timestep = 0
 
-            if all(dones) and len(dones) != 0:
-                break
+                timestep_reward.append(np.array(rewards))
+                timestep += 1
 
+                if (timestep + 1) % 100 == 0:
+                    print(
+                        f"timestep {timestep + 1} - average reward: \
+                                 {self.get_rewards(total_reward=total_reward)}")
 
-        print(f"Episode {episode + 1}, Total Reward: {total_reward:.2f}")
+            total_reward.append(np.array(timestep_reward))
 
-    env.close()
+            print(f"Episode {episode + 1} finished")
+
+            if (episode + 1) % 100 == 0:
+                print(
+                    f"Episode {episode + 1} - average reward: \
+                             {self.get_rewards(total_reward=total_reward)}")
 
 
 if __name__ == "__main__":
-    main(num_episodes=20, max_steps_per_episode=20)
+    simple_spread_params = SimpleSpreadParams(n=3, local_ratio=0.5, max_cycles=25)
+    loop_params = LoopParams(max_episodes=100, max_timesteps=1000, update_timestep=100)
+    vdn_test = QmixTest(simple_spread_params=simple_spread_params, loop_params=loop_params)
+    vdn_test.main()

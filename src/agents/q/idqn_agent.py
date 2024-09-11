@@ -6,7 +6,7 @@ from torchrl.data import ReplayBuffer, ListStorage
 from src.networks.deep_q_network import DeepQNetwork
 
 
-class DqnAgent:
+class IdqnAgent:
     def __init__(self, state_dim, hidden_dim, hidden_output_dim, n_actions, learning_rate, epsilon, gamma,
                  buffer_capacity, batch_size):
         self.q_network = DeepQNetwork(state_dim, hidden_dim, hidden_output_dim, n_actions)
