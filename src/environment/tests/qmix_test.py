@@ -1,7 +1,7 @@
 from src.agents.q.qmix_agent import QmixAgent
-from src.environment.common.common import LoopParams
-from src.environment.common.simple_spread import SimpleSpread, SimpleSpreadParams
-from src.environment.dqn.training_environment import DqnTest
+from src.environment.common import LoopParams
+from src.environment.simple_spread import SimpleSpreadParams, SimpleSpread
+from src.environment.training_environment import TrainingEnvironment
 
 if __name__ == "__main__":
     simple_spread_params = SimpleSpreadParams(n=3, local_ratio=0.5, max_cycles=25)
@@ -21,5 +21,5 @@ if __name__ == "__main__":
         buffer_capacity=10000,
         batch_size=20,
     )
-    vdn_test = DqnTest(env_instance=env_instance, loop_params=loop_params, agent=agent)
+    vdn_test = TrainingEnvironment(env_instance=env_instance, loop_params=loop_params, agent=agent)
     vdn_test.main()

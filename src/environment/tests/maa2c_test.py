@@ -1,12 +1,22 @@
 from src.agents.a2c.maa2c_agent import Maa2cAgent
-from src.environment.common.common import LoopParams
-from src.environment.common.simple_spread import SimpleSpreadParams
-from src.environment.tests.common import A2cParams
-from src.environment.tests.a2c_test import A2cTest
+from src.environment.common import LoopParams
+from src.environment.simple_spread import SimpleSpreadParams, SimpleSpread
+from src.environment.training_environment import TrainingEnvironment
 
-if __name__ == '__main__':
-    loop_params = LoopParams(max_episodes=100, max_timesteps=1000, update_timestep=100)
+if __name__ == "__main__":
     simple_spread_params = SimpleSpreadParams(n=3, local_ratio=0.5, max_cycles=25)
-    a2c_params = A2cParams(agent=Maa2cAgent, hidden_dim=256, lr=3e-6, gamma=0.99, eps_clip=0.2, K_epochs=4, entropy_coefficient=None)
-    a2c_test = A2cTest(loop_params=loop_params, simple_spread_params=simple_spread_params, a2c_params=a2c_params)
-    a2c_test.main()
+    env_instance = SimpleSpread(params=simple_spread_params)
+    loop_params = LoopParams(max_episodes=100, max_timesteps=1000, update_timestep=100)
+    agent = Maa2cAgent(
+        n_agents=env_instance.n_agents,
+        obs_dim=env_instance.obs_size,
+        hidden_dim=128,
+        action_dim=env_instance.action_size,
+        lr=0.000001,
+        eps_clip=0.2,
+        gamma=0.99,
+        K_epochs = 4,
+        entropy_coefficient=None
+    )
+    vdn_test = TrainingEnvironment(env_instance=env_instance, loop_params=loop_params, agent=agent)
+    vdn_test.main()
