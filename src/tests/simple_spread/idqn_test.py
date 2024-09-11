@@ -1,7 +1,7 @@
 from src.agents.q.idqn_agent import IdqnAgent
 from src.environment.common import LoopParams
 from src.environment.simple_spread import SimpleSpreadParams, SimpleSpread
-from src.environment.training_environment import TrainingEnvironment
+from src.experiment.training_loop import TrainingLoop
 
 if __name__ == "__main__":
     simple_spread_params = SimpleSpreadParams(n=3, local_ratio=0.5, max_cycles=25)
@@ -19,5 +19,5 @@ if __name__ == "__main__":
         buffer_capacity=10000,
         batch_size=20,
     )
-    vdn_test = TrainingEnvironment(env_instance=env_instance, loop_params=loop_params, agent=agent)
+    vdn_test = TrainingLoop(env_instance=env_instance, loop_params=loop_params, agent=agent)
     vdn_test.main()

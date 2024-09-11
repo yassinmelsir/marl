@@ -3,7 +3,7 @@ import numpy as np
 from src.environment.common import LoopParams
 
 
-class TrainingEnvironment:
+class TrainingLoop:
     def __init__(self, env_instance, agent, loop_params: LoopParams):
         self.loop_params = loop_params
         self.agent = agent
