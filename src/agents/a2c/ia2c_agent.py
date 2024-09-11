@@ -1,15 +1,15 @@
 import torch
 
 from src.agents.a2c.a2c_agent import A2cAgent
-from src.agents.im_agent import ImAgent
+from src.agents.i_agent import IAgent
 from src.common.memory import Memory
 from src.networks.stochastic_actor import StochasticActor
 from src.networks.state_critic import StateCritic
 
 
-class Ia2cAgent(ImAgent):
+class Ia2cAgent(IAgent):
     def __init__(self, n_agents, obs_dim, action_dim, hidden_dim, learning_rate, gamma, epsilon, K_epochs, entropy_coefficient):
-        super().__init__(n_agents, obs_dim, action_dim, hidden_dim, learning_rate, gamma, epsilon, K_epochs)
+        super().__init__(n_agents, obs_dim, action_dim, hidden_dim, learning_rate, gamma, epsilon, K_epochs, None, None)
         self.agents = []
         for _ in range(n_agents):
             actor = StochasticActor(obs_dim=obs_dim, action_dim=action_dim, hidden_dim=hidden_dim)

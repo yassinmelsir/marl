@@ -9,6 +9,7 @@ class DqnAgent:
         self.target_network = target_q_network
         self.optimizer = optimizer
         self.replay_buffer = replay_buffer
+        self.memory = None
 
         self.action_dim = action_dim
         self.epsilon = epsilon
