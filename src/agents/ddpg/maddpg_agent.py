@@ -45,22 +45,25 @@ class MaddpgAgent(IddpgAgent):
         self.obs_dim = obs_dim
         self.action_dim = action_dim
 
-    def update_centralized_critic(self, global_old_observations, global_old_actions, rewards, next_observations, dones,
-                                  gamma):
+    def update_centralized_critic(self, observations, next_observations, action_probs, rewards, dones):
 
-        predicted_q_values = self.centralized_critic(global_old_observations, global_old_actions)
+        predicted_q_values = self.centralized_critic(observations, action_probs)
+
 
         next_actions = []
-        for agent, next_obs in zip(self.ddpg_agents, next_observations):
-            next_action = agent.target_actor(next_obs)
+        reshaped_next_obs = next_observations.view(next_observations.size(0), self.n_agents, self.obs_dim)
+        for idx, agent in enumerate(self.agents):
+            agent_next_obs = reshaped_next_obs[:, idx, :]
+            next_action = agent.target_actor(agent_next_obs)
             next_actions.append(next_action)
+
         global_next_actions = torch.cat(next_actions, dim=-1)
 
         combined_next_input = torch.cat([next_observations.view(next_observations.size(0), -1), global_next_actions],
                                         dim=-1)
         target_q_values = self.centralized_target_critic(combined_next_input).detach()
 
-        target_q_values = rewards + gamma * (1 - dones) * target_q_values
+        target_q_values = rewards + self.gamma * (1 - dones) * target_q_values
 
         critic_loss = F.mse_loss(predicted_q_values, target_q_values)
 
@@ -75,46 +78,31 @@ class MaddpgAgent(IddpgAgent):
             target_param.data.copy_(tau * param.data + (1 - tau) * target_param.data)
 
     def update(self):
-        global_rewards, global_old_observations, global_old_actions, global_next_observations, global_dones = [], [], [], [], []
+        if not self.replay_buffer.can_sample():
+            return None
 
-        for idx, agent in enumerate(self.ddpg_agents):
-            states, actions, rewards, next_states, dones = agent.get_update_data()
+        global_obs, global_next_obs, global_actions, global_action_probs, global_rewards, global_dones = self.get_batch()
 
-            if rewards is None:
-                continue
+        global_obs = global_obs.view(-1, self.n_agents * self.obs_dim)
+        global_next_obs = global_next_obs.view(-1, self.n_agents * self.obs_dim)
 
-            global_rewards.append(rewards)
-            global_old_observations.append(states)
-            global_old_actions.append(actions)
-            global_next_observations.append(next_states)
-            global_dones.append(dones)
-
-        if len(global_rewards) == 0:
-            return
-
-        global_old_observations = torch.stack(global_old_observations).view(-1, self.n_agents * self.obs_dim)
-        global_old_actions = torch.stack(global_old_actions).view(-1, self.n_agents * self.action_dim)
-        global_rewards = torch.stack(global_rewards).sum(dim=0)
-        global_next_observations = torch.stack(global_next_observations).view(-1, self.n_agents * self.obs_dim)
-        global_dones = torch.stack(global_dones).sum(dim=0)
+        global_action_probs = global_action_probs.view(-1, self.n_agents * self.action_dim)
+        global_rewards = global_rewards.sum(dim=0)
+        global_dones = global_dones.sum(dim=0)
 
         global_observation_values = self.update_centralized_critic(
-            global_old_observations=global_old_observations,
-            global_old_actions=global_old_actions,
+            observations=global_obs,
+            next_observations=global_next_obs,
+            action_probs=global_action_probs,
             rewards=global_rewards,
-            next_observations=global_next_observations,
             dones=global_dones,
-            gamma=self.gamma
         )
 
+        reshaped_global_obs = global_obs.view(global_obs.size(0), self.n_agents, self.obs_dim)
         for idx, agent in enumerate(self.ddpg_agents):
-            rewards, old_observations, old_actions, next_observations, dones = agent.get_update_data()
-
-            if rewards is None:
-                continue
-
+            agent_obs = reshaped_global_obs[:, idx, :]
             agent.update_actor(
-                observations=old_observations,
+                observations=agent_obs,
             )
 
         self.soft_update(self.centralized_target_critic, self.centralized_critic)

@@ -31,24 +31,24 @@ class Maa2cAgent(Ia2cAgent):
             )
             self.a2c_agents.append(a2c_agent)
 
-    def update_centralized_critic(self, agent_observations, agent_rewards):
+    def update_centralized_critic(self, observations, rewards):
 
-        observation_values = self.centralized_critic(agent_observations)
+        q_values = self.centralized_critic(observations)
 
-        critic_loss = 0.5 * F.mse_loss(observation_values, agent_rewards)
+        critic_loss = 0.5 * F.mse_loss(q_values, rewards)
         self.centralized_critic_optimizer.zero_grad()
         critic_loss.backward()
         self.centralized_critic_optimizer.step()
 
-        return observation_values
+        return q_values
 
     def update(self):
         for idx, agent in enumerate(self.a2c_agents):
             rewards, old_observations, old_actions, next_observations = agent.get_update_data()
 
             observation_values = self.update_centralized_critic(
-                agent_observations=old_observations,
-                agent_rewards=rewards
+                observations=old_observations,
+                rewards=rewards
             )
 
             next_observation_values = self.centralized_critic(next_observations)
