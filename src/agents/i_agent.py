@@ -37,60 +37,7 @@ class IAgent:
         actions = []
         action_probs = []
 
-        for idx, agent_id in enumerate(env.agents):
-            observation, reward, termination, truncation, _ = env.last()
-            obs_tensor = torch.FloatTensor(observation)
-
-            if termination or truncation:
-                return rewards, [True]
-            else:
-                action_tuple = self.agents[idx].select_action(observation=obs_tensor)
-                action, action_probs_tensor = action_tuple
-
-            env.step(action)
-            next_observation = env.observe(agent_id)
-
-            next_obs_tensor = torch.FloatTensor(next_observation)
-            action_tensor = torch.IntTensor([action])
-            done_tensor = torch.BoolTensor([termination or truncation])
-            reward_tensor = torch.FloatTensor([reward])
-
-            observations.append(obs_tensor)
-            next_observations.append(next_obs_tensor)
-            actions.append(action_tensor)
-            action_probs.append(action_probs_tensor)
-            rewards.append(reward_tensor)
-            dones.append(done_tensor)
-
-            experience = (
-                obs_tensor,
-                next_obs_tensor,
-                action_tensor,
-                action_probs_tensor,
-                reward_tensor,
-                done_tensor
-            )
-
-            if self.agents[idx].memory:
-                self.agents[idx].memory.observations.append(obs_tensor)
-                self.agents[idx].memory.next_observations.append(next_obs_tensor)
-                self.agents[idx].memory.actions.append(action_tensor)
-                self.agents[idx].memory.action_probs.append(action_probs_tensor)
-                self.agents[idx].memory.rewards.append(reward_tensor)
-                self.agents[idx].memory.dones.append(done_tensor)
-            elif self.agents[idx].replay_buffer:
-                self.agents[idx].replay_buffer.add(experience)
-            else:
-                raise "Error! No memory or replay buffer!"
-
-        observations = torch.stack(observations)
-        next_observations = torch.stack(next_observations)
-        actions = torch.stack(actions)
-        action_probs = torch.stack(action_probs)
-        rewards = torch.tensor(rewards)
-        dones = torch.tensor(dones)
-
-        experience = (
+        global_experience = (
             observations,
             next_observations,
             actions,
@@ -99,8 +46,31 @@ class IAgent:
             dones
         )
 
-        if self.replay_buffer is not None:
-            self.replay_buffer.add(experience)
+        for idx, agent_id in enumerate(env.agents):
+            observation, reward, termination, truncation, _ = env.last()
+            obs_tensor = torch.FloatTensor(observation)
+
+            if termination or truncation:
+                return rewards, [True]
+            else:
+                action, action_probs_tensor = self.agents[idx].select_action(observation=obs_tensor)
+
+            env.step(action)
+            next_observation = env.observe(agent_id)
+            done = termination or truncation
+
+            agent_experience = (
+                obs_tensor,
+                next_observation,
+                action,
+                action_probs_tensor,
+                reward,
+                done
+            )
+
+            self.save_agent_data(global_experience, agent_experience, agent=self.agents[idx])
+
+        rewards, dones = self.save_global_data(global_experience)
 
         return rewards, dones
 
@@ -124,4 +94,65 @@ class IAgent:
 
     def get_memories(self):
         return [agent.memory for agent in self.agents]
+
+    def save_agent_data(self, global_experience, agent_experience, agent):
+        obs_tensor, next_observation, action, action_probs_tensor, reward, done = agent_experience
+        observations, next_observations, actions, action_probs, rewards, dones = global_experience
+
+        next_obs_tensor = torch.FloatTensor(next_observation)
+        action_tensor = torch.IntTensor([action])
+        done_tensor = torch.BoolTensor([done])
+        reward_tensor = torch.FloatTensor([reward])
+
+        observations.append(obs_tensor)
+        next_observations.append(next_obs_tensor)
+        actions.append(action_tensor)
+        action_probs.append(action_probs_tensor)
+        rewards.append(reward_tensor)
+        dones.append(done_tensor)
+
+        experience = (
+            obs_tensor,
+            next_obs_tensor,
+            action_tensor,
+            action_probs_tensor,
+            reward_tensor,
+            done_tensor
+        )
+
+        if agent.memory:
+            agent.memory.observations.append(obs_tensor)
+            agent.memory.next_observations.append(next_obs_tensor)
+            agent.memory.actions.append(action_tensor)
+            agent.memory.action_probs.append(action_probs_tensor)
+            agent.memory.rewards.append(reward_tensor)
+            agent.memory.dones.append(done_tensor)
+        elif agent.replay_buffer:
+            agent.replay_buffer.add(experience)
+        else:
+            raise "Error! No memory or replay buffer!"
+
+    def save_global_data(self, experience):
+        observations, next_observations, actions, action_probs, rewards, dones = experience
+
+        observations = torch.stack(observations)
+        next_observations = torch.stack(next_observations)
+        actions = torch.stack(actions)
+        action_probs = torch.stack(action_probs)
+        rewards = torch.tensor(rewards)
+        dones = torch.tensor(dones)
+
+        experience = (
+            observations,
+            next_observations,
+            actions,
+            action_probs,
+            rewards,
+            dones
+        )
+
+        if self.replay_buffer is not None:
+            self.replay_buffer.add(experience)
+
+        return rewards, dones
 
