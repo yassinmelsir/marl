@@ -6,12 +6,15 @@ import torch.nn.functional as F
 from torch import optim
 
 from src.agents.q.dqn_agent import DqnAgent
+from src.agents.q.idqn_agent import IdqnAgent
 from src.common.replay_buffer import ReplayBuffer
 from src.networks.deep_q_network import DeepQNetwork
 
-class VdnAgent:
+class VdnAgent(IdqnAgent):
     def __init__(self, n_agents, state_dim, hidden_dim, hidden_output_dim, action_dim,
                  learning_rate, epsilon, gamma, buffer_capacity, batch_size):
+        super().__init__(n_agents, state_dim, hidden_dim, hidden_output_dim, action_dim,
+                 learning_rate, epsilon, gamma, buffer_capacity, batch_size)
         self.optimizer = None
         params = []
         self.agents = []
@@ -76,73 +79,3 @@ class VdnAgent:
             self.optimizer.step()
 
             return loss.item()
-
-    def get_batch(self):
-        batch = self.replay_buffer.sample()
-        observations, next_observations, actions, rewards, dones = zip(*batch)
-
-        return (
-            torch.stack(observations),
-            torch.stack(next_observations),
-            torch.stack(actions),
-            torch.stack(rewards),
-            torch.stack(dones)
-        )
-
-
-    def step(self, env):
-        states = []
-        next_states = []
-        rewards = []
-        dones = []
-        actions = []
-        for idx, agent_id in enumerate(env.agents):
-            observation, reward, termination, truncation, _ = env.last()
-            obs_tensor = torch.FloatTensor(observation)
-
-            if termination or truncation:
-                return rewards, [True]
-            else:
-                action = self.agents[idx].select_action(state=obs_tensor)
-
-            env.step(action)
-            next_observation = env.observe(agent_id)
-
-            next_obs_tensor = torch.FloatTensor(next_observation)
-            action_tensor = torch.IntTensor([action])
-            done_tensor = torch.BoolTensor([termination or truncation])
-            reward_tensor = torch.FloatTensor([reward])
-
-            states.append(obs_tensor)
-            next_states.append(next_obs_tensor)
-            actions.append(action_tensor)
-            rewards.append(reward_tensor)
-            dones.append(done_tensor)
-
-            experience = (
-                obs_tensor,
-                next_obs_tensor,
-                action_tensor,
-                reward_tensor,
-                done_tensor
-            )
-
-            self.agents[idx].replay_buffer.add(experience)
-
-        states = torch.stack(states)
-        next_states = torch.stack(next_states)
-        actions = torch.stack(actions)
-        rewards = torch.tensor(rewards)
-        dones = torch.tensor(dones)
-
-        experience = (
-            states,
-            next_states,
-            actions,
-            rewards,
-            dones
-        )
-
-        self.replay_buffer.add(experience)
-
-        return rewards, dones

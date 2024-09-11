@@ -39,6 +39,17 @@ class IdqnAgent:
         for idx, agent in enumerate(self.agents):
             agent.update()
 
+    def get_batch(self):
+        batch = self.replay_buffer.sample()
+        observations, next_observations, actions, rewards, dones = zip(*batch)
+
+        return (
+            torch.stack(observations),
+            torch.stack(next_observations),
+            torch.stack(actions),
+            torch.stack(rewards),
+            torch.stack(dones)
+        )
 
     def step(self, env):
         states = []
@@ -81,6 +92,7 @@ class IdqnAgent:
 
         states = torch.stack(states)
         next_states = torch.stack(next_states)
+        actions = torch.stack(actions)
         rewards = torch.tensor(rewards)
         dones = torch.tensor(dones)
 
