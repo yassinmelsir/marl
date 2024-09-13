@@ -29,51 +29,6 @@ class IAgent:
         else:
             self.replay_buffer = None
 
-    def step(self, env):
-        observations = []
-        next_observations = []
-        rewards = []
-        dones = []
-        actions = []
-        action_probs = []
-
-        global_experience = (
-            observations,
-            next_observations,
-            actions,
-            action_probs,
-            rewards,
-            dones
-        )
-
-        for idx, agent_id in enumerate(env.agents):
-            observation, reward, termination, truncation, _ = env.last()
-            obs_tensor = torch.FloatTensor(observation)
-
-            if termination or truncation:
-                return rewards, [True]
-            else:
-                action, action_probs_tensor = self.agents[idx].select_action(observation=obs_tensor)
-
-            env.select_action(action)
-            next_observation = env.observe_agent(agent_id)
-            done = termination or truncation
-
-            agent_experience = (
-                obs_tensor,
-                next_observation,
-                action,
-                action_probs_tensor,
-                reward,
-                done
-            )
-
-            self.save_agent_data(global_experience, agent_experience, agent=self.agents[idx])
-
-        rewards, dones = self.save_global_data(global_experience)
-
-        return rewards, dones
-
     def update(self):
         for idx, agent in enumerate(self.agents):
             agent.update()
