@@ -45,7 +45,7 @@ class A2cAgent:
 
         return observations, next_observations, actions, rewards
 
-    def update_actor(self, observations, actions, rewards, observation_values, next_observation_values):
+    def update_actor(self, observations, actions, rewards, observation_values, next_observation_values, action_probs=None):
 
         advantages = rewards + self.gamma * next_observation_values - observation_values.detach()
 

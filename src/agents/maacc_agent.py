@@ -41,10 +41,12 @@ class Maacc(IAgent):
 
         global_rewards = torch.stack(global_rewards).sum(dim=0)
 
-        global_observation_values = self.update_centralized_critic(
+        global_obs_values = self.update_centralized_critic(
             global_observations=global_observations,
             global_rewards=global_rewards
         )
+
+        global_next_obs_values = self.centralized_critic(global_observations)
 
         for idx, agent in enumerate(self.ppo_agents):
             rewards, observations, actions, action_probs = agent.get_update_data()
@@ -54,7 +56,8 @@ class Maacc(IAgent):
                 actions=actions,
                 action_probs=action_probs,
                 rewards=rewards,
-                observation_values=global_observation_values
+                obs_values=global_obs_values,
+                next_obs_values=global_next_obs_values,
             )
 
             agent.memory.clear_memory()

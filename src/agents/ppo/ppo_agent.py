@@ -42,7 +42,7 @@ class PpoAgent:
 
         return observations, actions, action_probs, rewards
 
-    def update_actor(self, observations, actions, action_probs, rewards, observation_values):
+    def update_actor(self, observations, actions, action_probs, rewards, observation_values, next_observation_values=None):
 
         advantages = rewards - observation_values.detach()
         new_log_probs = self.actor(observations)
