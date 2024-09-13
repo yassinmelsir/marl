@@ -1,5 +1,6 @@
 import os
 import numpy as np
+import torch
 import traci
 import subprocess
 
@@ -14,7 +15,7 @@ class TrafficEnvironment:
         self.start_simulation()
         self.agents = self.traci.trafficlight.getIDList()
 
-        self.obs_size = len(self.get_traffic_light_observations(self.agents[0]))
+        self.obs_size = len(self.get_traci_traffic_light_observation(self.agents[0]))
         self.action_size = None
         self.n_agents = len(self.agents)
 
@@ -32,15 +33,6 @@ class TrafficEnvironment:
         self.simulation_running = True
         print(f"Simulation Running: {self.simulation_running}")
 
-    def step(self):
-        if not self.simulation_running:
-            raise RuntimeError("Simulation has not been started. Call start_simulation() first.")
-
-        if self.traci.simulation.getMinExpectedNumber() > 0:
-            self.traci.simulationStep()
-        else:
-            self.simulation_running = False
-            print("All routes have been parsed completey")
 
     def close_simulation(self):
         if self.simulation_running:
@@ -49,7 +41,6 @@ class TrafficEnvironment:
             print("Simulation completed and data logged.")
         else:
             print("Simulation was not running.")
-
 
     def get_obs_action_size(self):
         return self.obs_size, self.action_size
@@ -60,54 +51,77 @@ class TrafficEnvironment:
     def reset(self):
         return
 
-    def get_traffic_light_observations(self, tl_id):
-        observation = []
+    def step(self, agent):
+        observations = []
+        next_observations = []
+        rewards = []
+        dones = []
+        actions = []
+        action_probs = []
 
-        # Current Traffic Light State
-        current_phase = self.traci.trafficlight.getRedYellowGreenState(tl_id)
-        time_since_last_change = self.traci.trafficlight.getPhaseDuration(tl_id)
-        observation.append(current_phase)
-        observation.append(time_since_last_change)
+        global_experience = (
+            observations,
+            next_observations,
+            actions,
+            action_probs,
+            rewards,
+            dones
+        )
 
-        # Traffic Density (for each controlled lane)
-        controlled_lanes = self.traci.trafficlight.getControlledLanes(tl_id)
-        for lane_id in controlled_lanes:
-            num_vehicles = self.traci.lane.getLastStepVehicleNumber(lane_id)
-            queue_length = self.traci.lane.getLastStepHaltingNumber(lane_id)
-            avg_speed = self.traci.lane.getLastStepMeanSpeed(lane_id)
-            observation.extend([num_vehicles, queue_length, avg_speed])
+        for tl_id in self.agents:
+            observation = self.get_traci_traffic_light_observation(tl_id)
+            obs_tensor = torch.FloatTensor(observation)
+            observations.append(obs_tensor)
 
-        # Traffic Flow Information (for each controlled lane)
-        for lane_id in controlled_lanes:
-            arrival_rate = self.traci.lane.getLastStepVehicleNumber(lane_id)  # Approximation for arrival rate
-            time_gaps = self.traci.lane.getLastStepVehicleHaltingNumber(lane_id)  # Not exact but indicative
-            observation.extend([arrival_rate, time_gaps])
+        for idx, tl_id in enumerate(self.agents):
+            action, action_probs_tensor = agent.agents[idx].select_action(observation=observations[idx])
+            actions.append(action)
+            action_probs.append(action_probs_tensor)
 
-        # Vehicle Types (for each controlled lane)
-        for lane_id in controlled_lanes:
-            vehicle_types = self.traci.lane.getLastStepVehicleIDs(lane_id)
-            car_count = sum(1 for veh_id in vehicle_types if self.traci.vehicle.getVehicleClass(veh_id) == 'passenger')
-            bus_count = sum(1 for veh_id in vehicle_types if self.traci.vehicle.getVehicleClass(veh_id) == 'bus')
-            truck_count = sum(1 for veh_id in vehicle_types if self.traci.vehicle.getVehicleClass(veh_id) == 'truck')
-            observation.extend([car_count, bus_count, truck_count])
+            self.apply_traci_traffic_light_action(tl_id, action)
 
-        pedestrian_crossings = self.traci.trafficlight.getControlledLinks(
-            tl_id)  # This gives lane links, adjust for crosswalks
-        for link in pedestrian_crossings:
-            pedestrian_lane = link[0][0]  # Assuming first element is the pedestrian lane
-            pedestrian_waiting_time = self.traci.lane.getWaitingTime(pedestrian_lane)
-            pedestrian_count = self.traci.lane.getLastStepPersonNumber(pedestrian_lane)
-            observation.extend([pedestrian_waiting_time, pedestrian_count])
+        self.traci.simulationStep()
 
-        # Intersection Characteristics (assuming fixed for this example, can be adjusted based on the layout)
-        num_lanes = len(controlled_lanes)
-        observation.append(num_lanes)
+        for idx, tl_id in enumerate(self.agents):
+            next_observation = self.get_traci_traffic_light_observation(tl_id)
+            reward = self.get_traci_traffic_light_reward(tl_id)
+            done = self.check_traci_traffic_light_done(tl_id)
 
-        # Phase Switching History (simplified, last phase duration and phase state)
-        previous_phase = self.traci.trafficlight.getPhase(tl_id)
-        observation.append(previous_phase)
+            next_observations.append(torch.FloatTensor(next_observation))
+            rewards.append(reward)
+            dones.append(done)
 
-        # Convert observation list to numpy array for easy processing in RL algorithms
-        observation_vector = np.array(observation)
+            agent_experience = (
+                observations[idx],
+                next_observations[idx],
+                actions[idx],
+                action_probs[idx],
+                rewards[idx],
+                dones[idx]
+            )
+            agent.save_agent_data(global_experience, agent_experience, agent=agent.agents[idx])
 
-        return observation_vector
+        rewards, dones = agent.save_global_data(global_experience)
+
+        return rewards, dones
+
+
+    def get_traci_traffic_light_observation(self, tl_id):
+        phase = self.traci.trafficlight.getPhase(tl_id)
+        queue_lengths = [self.traci.lane.getLastStepVehicleNumber(lane_id) for lane_id in
+                         self.traci.trafficlight.getControlledLanes(tl_id)]
+        return [phase] + queue_lengths
+
+    def apply_traci_traffic_light_action(self, tl_id, action):
+        self.traci.trafficlight.setPhase(tl_id, action)
+
+    def get_traci_traffic_light_reward(self, tl_id):
+        queue_lengths = [self.traci.lane.getLastStepVehicleNumber(lane_id) for lane_id in
+                         self.traci.trafficlight.getControlledLanes(tl_id)]
+        reward = -sum(queue_lengths)
+        return reward
+
+    def check_traci_traffic_light_done(self, tl_id):
+        return False
+
+
