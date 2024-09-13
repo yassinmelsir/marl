@@ -8,8 +8,8 @@ from src.networks.state_critic import StateCritic
 
 
 class Ia2cAgent(IAgent):
-    def __init__(self, agent_params, replay_buffer):
-        super().__init__(agent_params, replay_buffer)
+    def __init__(self, agent_params):
+        super().__init__(agent_params, None)
         self.agents = []
         for param in agent_params:
             actor = StochasticActor(obs_dim=param.obs_dim, action_dim=param.action_dim, hidden_dim=param.hidden_dim)

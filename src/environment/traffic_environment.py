@@ -3,21 +3,24 @@ import numpy as np
 import torch
 import traci
 import subprocess
+from dataclasses import dataclass
+
+
+@dataclass
+class TrafficEnvironmentParams:
+    sumo_cmd: str
+    gui: bool
 
 
 class TrafficEnvironment:
-    def __init__(self, sumo_cmd: str, gui=False):
-        self.gui = gui
-        self.sumo_cmd = sumo_cmd.split()
+    def __init__(self, params: TrafficEnvironmentParams):
+        self.gui = params.gui
+        self.sumo_cmd = params.sumo_cmd.split()
         self.simulation_running = False
         self.traci = traci
 
         self.start_simulation()
         self.agents = self.traci.trafficlight.getIDList()
-
-        self.obs_size = len(self.get_traci_traffic_light_observation(self.agents[0]))
-        self.action_size = None
-        self.n_agents = len(self.agents)
 
     def _start_xquartz(self):
         result = subprocess.run(["open", "-a", "XQuartz"], capture_output=True, text=True)
@@ -33,7 +36,6 @@ class TrafficEnvironment:
         self.simulation_running = True
         print(f"Simulation Running: {self.simulation_running}")
 
-
     def close_simulation(self):
         if self.simulation_running:
             self.traci.close()
@@ -42,8 +44,14 @@ class TrafficEnvironment:
         else:
             print("Simulation was not running.")
 
-    def get_obs_action_size(self):
-        return self.obs_size, self.action_size
+    def get_agent_params(self):
+        params = []
+        for agent_id in self.agents:
+            obs_dim = self.get_traci_traffic_light_observation(agent_id)
+            action_dim = self.get_possible_actions(agent_id)
+            params.append((obs_dim, action_dim))
+        return params
+
 
     def get_env(self):
         return self.traci
@@ -105,7 +113,6 @@ class TrafficEnvironment:
 
         return rewards, dones
 
-
     def get_traci_traffic_light_observation(self, tl_id):
         phase = self.traci.trafficlight.getPhase(tl_id)
         queue_lengths = [self.traci.lane.getLastStepVehicleNumber(lane_id) for lane_id in
@@ -124,4 +131,7 @@ class TrafficEnvironment:
     def check_traci_traffic_light_done(self, tl_id):
         return False
 
-
+    def get_possible_actions(self, tl_id):
+        num_phases = self.traci.trafficlight.getPhaseNumber(tl_id)
+        possible_actions = list(range(num_phases))
+        return possible_actions

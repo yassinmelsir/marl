@@ -40,7 +40,7 @@ class PpoAgent:
         actions = torch.tensor(self.memory.actions, dtype=torch.long)
         action_probs = torch.tensor(self.memory.action_probs, dtype=torch.float32)
 
-        return rewards, observations, actions, action_probs
+        return observations, actions, action_probs, rewards
 
     def update_actor(self, observations, actions, action_probs, rewards, observation_values):
 
@@ -69,7 +69,7 @@ class PpoAgent:
         return observation_values
 
     def update(self):
-        rewards, observations, actions, action_probs = self.get_update_data()
+        observations, actions, action_probs, rewards = self.get_update_data()
 
         for _ in range(self.K_epochs):
             observation_values = self.update_critic(

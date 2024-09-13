@@ -1,11 +1,14 @@
 from dataclasses import dataclass
 from typing import Optional
+from src.common.replay_buffer import ReplayBuffer
+
 
 @dataclass
 class CentralParams:
     obs_dim: int
     hidden_dim: int
     learning_rate: int
+    replay_buffer: Optional[ReplayBuffer] = None
 
 @dataclass
 class AgentParams:
@@ -17,3 +20,4 @@ class AgentParams:
     epsilon: float
     K_epochs: int
     entropy_coefficient: Optional[float] = None
+    replay_buffer: Optional[ReplayBuffer] = None

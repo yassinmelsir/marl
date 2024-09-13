@@ -1,9 +1,9 @@
-from typing import Union
+from typing import Union, Optional
 
 import torch
 
 from src.agents.a2c.a2c_agent import A2cAgent
-from src.agents.common import AgentParams
+from src.agents.common import AgentParams, CentralParams
 from src.agents.ddpg.ddpg_agent import DdpgAgent
 from src.agents.ppo.ppo_agent import PpoAgent
 from src.agents.q.dqn_agent import DqnAgent
@@ -16,10 +16,11 @@ from src.networks.state_critic import StateCritic
 
 
 class IAgent:
-    def __init__(self, agent_params: list[AgentParams], replay_buffer: ReplayBuffer):
+    def __init__(self, agent_params: list[AgentParams], central_params: Optional[CentralParams] = None):
         self.agent_params = agent_params
-        self.replay_buffer = replay_buffer
         self.agents = []
+
+        self.replay_buffer = None if central_params is None else central_params.replay_buffer
 
     def update(self):
         for idx, agent in enumerate(self.agents):

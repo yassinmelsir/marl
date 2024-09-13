@@ -1,79 +1,24 @@
-import torch
-from torch import optim
-import torch.nn.functional as F
-
-from src.agents.ppo.ippo_agent import IppoAgent
+from src.agents.maacc_agent import Maacc
 from src.agents.ppo.ppo_agent import PpoAgent
 from src.common.memory import Memory
 from src.networks.stochastic_actor import StochasticActor
-from src.networks.state_critic import StateCritic
 
 
-class MappoAgent(IppoAgent):
-    def __init__(self, n_agents, obs_dim, action_dim, hidden_dim, learning_rate, gamma, epsilon, K_epochs):
-        super().__init__(n_agents, obs_dim, action_dim, hidden_dim, learning_rate, gamma, epsilon, K_epochs)
+class MappoAgent(Maacc):
+    def __init__(self, agent_params, central_params):
+        super().__init__(agent_params, central_params)
         self.ppo_agents = []
         self.memories = []
-        global_obs_dim = obs_dim * n_agents
-        self.centralized_critic = StateCritic(obs_dim=global_obs_dim, hidden_dim=hidden_dim)
-        self.centralized_critic_optimizer = optim.Adam(self.centralized_critic.parameters(), lr=learning_rate)
-        for _ in range(n_agents):
-            actor = StochasticActor(obs_dim=obs_dim, action_dim=action_dim, hidden_dim=hidden_dim)
+        for params in agent_params:
+            actor = StochasticActor(obs_dim=params.obs_dim, action_dim=params.action_dim, hidden_dim=params.hidden_dim)
             memory = Memory()
             ppo_agent = PpoAgent(
                 actor=actor,
                 critic=self.centralized_critic,
                 memory=memory,
-                learning_rate=learning_rate,
-                gamma=gamma,
-                epsilon=epsilon,
-                K_epochs=K_epochs
+                learning_rate=params.learning_rate,
+                gamma=params.gamma,
+                epsilon=params.epsilon,
+                K_epochs=params.K_epochs
             )
             self.ppo_agents.append(ppo_agent)
-
-    def update_centralized_critic(self, global_old_observations, global_rewards):
-
-        global_observation_values = self.centralized_critic(global_old_observations)
-
-        critic_loss = 0.5 * F.mse_loss(global_observation_values, global_rewards)
-        self.centralized_critic_optimizer.zero_grad()
-        critic_loss.backward()
-        self.centralized_critic_optimizer.step()
-
-        return global_observation_values
-
-    def update(self):
-        global_rewards, global_old_observations, global_old_actions, global_old_log_probs = [], [], [], []
-        for idx, agent in enumerate(self.ppo_agents):
-            rewards, old_observations, old_actions, old_log_probs = agent.get_update_data()
-            global_rewards.append(rewards)
-            global_old_observations.append(old_observations)
-            global_old_actions.append(old_actions)
-            global_old_log_probs.append(old_log_probs)
-
-        global_old_observations = torch.stack(global_old_observations)
-
-        num_agents, timesteps, global_obs_dim = global_old_observations.shape
-        global_old_observations = global_old_observations.view(timesteps, num_agents * global_obs_dim)
-
-        global_rewards = torch.stack(global_rewards).sum(dim=0)
-
-        global_observation_values = self.update_centralized_critic(
-            global_old_observations=global_old_observations,
-            global_rewards=global_rewards
-        )
-
-        for idx, agent in enumerate(self.ppo_agents):
-            rewards, old_observations, old_actions, old_log_probs = agent.get_update_data()
-
-            agent.update_actor(
-                old_observations=old_observations,
-                old_actions=old_actions,
-                old_log_probs=old_log_probs,
-                rewards=rewards,
-                observation_values=global_observation_values
-            )
-
-            agent.memory.clear_memory()
-
-

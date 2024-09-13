@@ -39,22 +39,22 @@ class A2cAgent:
             rewards.insert(0, discounted_reward)
 
         rewards = torch.tensor(rewards, dtype=torch.float32).unsqueeze(1)
-        old_observations = torch.stack([torch.FloatTensor(row) for row in self.memory.observations])
+        observations = torch.stack([torch.FloatTensor(row) for row in self.memory.observations])
         next_observations = torch.stack([torch.FloatTensor(row) for row in self.memory.next_observations])
-        old_actions = torch.tensor(self.memory.actions, dtype=torch.long)
+        actions = torch.tensor(self.memory.actions, dtype=torch.long)
 
-        return rewards, old_observations, old_actions, next_observations
+        return observations, next_observations, actions, rewards
 
-    def update_actor(self, old_observations, old_actions, rewards, observation_values, next_observation_values):
+    def update_actor(self, observations, actions, rewards, observation_values, next_observation_values):
 
         advantages = rewards + self.gamma * next_observation_values - observation_values.detach()
 
-        log_probs = self.actor(old_observations)
+        log_probs = self.actor(observations)
         dist = torch.distributions.Categorical(log_probs)
-        new_log_probs = dist.log_prob(old_actions)
+        new_log_probs = dist.log_prob(actions)
 
         if self.entropy_coefficient is not None:
-            entropy = dist.entropy().mean()  # Encourage exploration
+            entropy = dist.entropy().mean()
             actor_loss = -torch.mean(new_log_probs * advantages) - self.entropy_coefficient * entropy
         else:
             actor_loss = -torch.mean(new_log_probs * advantages)
@@ -63,8 +63,8 @@ class A2cAgent:
         actor_loss.backward()
         self.actor_optimizer.step()
 
-    def update_critic(self, old_observations, rewards):
-        observation_values = self.critic(old_observations)
+    def update_critic(self, observations, rewards):
+        observation_values = self.critic(observations)
         critic_loss = 0.5 * F.mse_loss(observation_values, rewards)
         self.critic_optimizer.zero_grad()
         critic_loss.backward()
@@ -73,19 +73,19 @@ class A2cAgent:
         return observation_values
 
     def update(self):
-        rewards, old_observations, old_actions, next_observations = self.get_update_data()
+        observations, next_observations, actions, rewards = self.get_update_data()
 
         for _ in range(self.K_epochs):
             observation_values = self.update_critic(
-                old_observations=old_observations,
+                observations=observations,
                 rewards=rewards
             )
 
             next_observation_values = self.critic(next_observations)
 
             self.update_actor(
-                old_observations=old_observations,
-                old_actions=old_actions,
+                observations=observations,
+                actions=actions,
                 rewards=rewards,
                 observation_values=observation_values,
                 next_observation_values=next_observation_values
