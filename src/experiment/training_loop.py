@@ -24,8 +24,7 @@ class TrainingLoop:
             self.env_instance.reset()
             timestep_reward = []
             for t in range(max_timesteps):
-                env = self.env_instance.get_env()
-                rewards, dones = self.agent.step(env=env)
+                rewards, dones = self.env_instance.step(agent=self.agent)
 
                 if all(dones):
                     break

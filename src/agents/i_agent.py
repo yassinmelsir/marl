@@ -55,8 +55,8 @@ class IAgent:
             else:
                 action, action_probs_tensor = self.agents[idx].select_action(observation=obs_tensor)
 
-            env.step(action)
-            next_observation = env.observe(agent_id)
+            env.select_action(action)
+            next_observation = env.observe_agent(agent_id)
             done = termination or truncation
 
             agent_experience = (
