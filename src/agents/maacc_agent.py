@@ -36,8 +36,8 @@ class Maacc(IAgent):
 
         global_observations = torch.stack(global_observations)
 
-        num_agents, timesteps, global_obs_dim = global_observations.shape
-        global_observations = global_observations.view(timesteps, num_agents * global_obs_dim)
+        num_agents, timesteps, obs_dim = global_observations.shape
+        global_observations = global_observations.view(timesteps, num_agents * obs_dim)
 
         global_rewards = torch.stack(global_rewards).sum(dim=0)
 

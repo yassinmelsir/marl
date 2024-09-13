@@ -7,7 +7,7 @@ from src.common.replay_buffer import ReplayBuffer
 class CentralParams:
     obs_dim: int
     hidden_dim: int
-    learning_rate: int
+    learning_rate: float
     replay_buffer: Optional[ReplayBuffer] = None
 
 @dataclass
