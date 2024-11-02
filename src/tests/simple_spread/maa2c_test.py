@@ -35,7 +35,7 @@ if __name__ == "__main__":
     ]
 
     central_params = CentralParams(
-        obs_dim=obs_dim,
+        obs_dim=obs_dim*n_agents,
         hidden_dim=hidden_dim,
         learning_rate=learning_rate,
         replay_buffer=ReplayBuffer(

@@ -4,7 +4,6 @@ import torch.nn.functional as F
 
 from src.agents.a2c.a2c_agent import A2cAgent
 from src.agents.i_agent import IAgent
-from src.agents.ppo.ippo_agent import IppoAgent
 from src.common.memory import Memory
 from src.networks.state_critic import StateCritic
 from src.networks.stochastic_actor import StochasticActor
@@ -81,8 +80,8 @@ class Maacc(IAgent):
                 actions=actions,
                 action_probs=action_probs,
                 rewards=rewards,
-                obs_values=global_obs_values,
-                next_obs_values=global_next_obs_values,
+                observation_values=global_obs_values,
+                next_observation_values=global_next_obs_values,
             )
 
             agent.memory.clear_memory()
