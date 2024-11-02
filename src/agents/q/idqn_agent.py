@@ -1,4 +1,3 @@
-import torch
 from torch import optim
 from src.agents.i_agent import IAgent
 from src.agents.q.dqn_agent import DqnAgent
