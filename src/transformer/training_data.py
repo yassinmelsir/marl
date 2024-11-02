@@ -2,7 +2,7 @@ import numpy as np
 import torch
 from pettingzoo.mpe import simple_spread_v3
 
-file_name = "transfomer_training_data.npy"
+file_name = "data/transfomer_training_data.npy"
 
 num_agents = 3
 num_runs = 100

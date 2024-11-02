@@ -5,7 +5,7 @@ import torch.optim as optim
 from torch.utils.data import DataLoader, TensorDataset
 
 # Load your dictionary-structured dataset
-filename = "/Users/yme/Code/York/marl/src/transformer/transfomer_training_data.npy"
+filename = "/Users/yme/Code/York/marl/src/transformer/data/transfomer_training_data.npy"
 loaded_arr = np.load(filename, allow_pickle=True)
 
 
@@ -81,5 +81,8 @@ for epoch in range(num_epochs):
 
     avg_loss = total_loss / len(train_loader)
     print(f"Epoch [{epoch + 1}/{num_epochs}], Loss: {avg_loss:.4f}")
+
+    torch.save(model.state_dict(), f"weights/transformer_epoch_{epoch + 1}.pth")
+    print(f"Model weights saved for epoch {epoch + 1}")
 
 
