@@ -1,3 +1,4 @@
+from src.agents.common import AgentParams
 from src.agents.i_agent import IAgent
 from src.agents.ppo.ppo_agent import PpoAgent
 from src.common.memory import Memory
@@ -6,7 +7,7 @@ from src.networks.state_critic import StateCritic
 
 
 class IppoAgent(IAgent):
-    def __init__(self, agent_params, central_params):
+    def __init__(self, agent_params: list[AgentParams], central_params: Optional[CentralParams]):
         super().__init__(agent_params, central_params)
         self.agents = []
         for param in agent_params:

@@ -94,7 +94,6 @@ class DdpgAgent:
 
             observations, next_observations, actions, action_probs, rewards, dones = self.get_batch()
 
-
             for _ in range(self.K_epochs):
                 critic_loss = self.update_critic(
                     observations=observations,

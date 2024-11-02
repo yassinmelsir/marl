@@ -1,19 +1,7 @@
 from typing import Union, Optional
 
 import torch
-
-from src.agents.a2c.a2c_agent import A2cAgent
 from src.agents.common import AgentParams, CentralParams
-from src.agents.ddpg.ddpg_agent import DdpgAgent
-from src.agents.ppo.ppo_agent import PpoAgent
-from src.agents.q.dqn_agent import DqnAgent
-from src.common.memory import Memory
-from src.common.replay_buffer import ReplayBuffer
-from src.networks.stochastic_actor import StochasticActor
-from src.networks.state_critic import StateCritic
-
-
-
 
 class IAgent:
     def __init__(self, agent_params: list[AgentParams], central_params: Optional[CentralParams] = None):
@@ -25,7 +13,8 @@ class IAgent:
     def update(self):
         for idx, agent in enumerate(self.agents):
             agent.update()
-            agent.memory.clear_memory()
+            if hasattr(agent, 'memory'):
+                agent.memory.clear_memory()
 
     def get_batch(self):
         batch = self.replay_buffer.sample()
@@ -68,14 +57,14 @@ class IAgent:
             done_tensor
         )
 
-        if agent.memory:
+        if hasattr(agent, 'memory'):
             agent.memory.observations.append(obs_tensor)
             agent.memory.next_observations.append(next_obs_tensor)
             agent.memory.actions.append(action_tensor)
             agent.memory.action_probs.append(action_probs_tensor)
             agent.memory.rewards.append(reward_tensor)
             agent.memory.dones.append(done_tensor)
-        elif agent.replay_buffer:
+        elif hasattr(agent, 'replay_buffer') is not None:
             agent.replay_buffer.add(experience)
         else:
             raise "Error! No memory or replay buffer!"

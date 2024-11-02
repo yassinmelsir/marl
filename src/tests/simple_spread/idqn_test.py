@@ -3,7 +3,7 @@ from src.environment.common import LoopParams
 from src.environment.simple_spread import SimpleSpreadParams, SimpleSpread
 from src.experiment.training_loop import TrainingLoop
 
-if __name__ == "__main__":
+2if __name__ == "__main__":
     simple_spread_params = SimpleSpreadParams(n=3, local_ratio=0.5, max_cycles=25)
     env_instance = SimpleSpread(params=simple_spread_params)
     loop_params = LoopParams(max_episodes=100, max_timesteps=1000, update_timestep=100)

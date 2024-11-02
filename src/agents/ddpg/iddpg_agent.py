@@ -6,28 +6,26 @@ from src.networks.value_critic import ValueCritic
 
 
 class IddpgAgent(IAgent):
-    def __init__(self, n_agents, obs_dim, action_dim, hidden_dim, learning_rate, gamma, epsilon, K_epochs, buffer_capacity,
-                         batch_size, noise_scale, temperature):
-        super().__init__(n_agents, obs_dim, action_dim, hidden_dim, learning_rate, gamma, epsilon, K_epochs, buffer_capacity,
-                         batch_size)
-        for _ in range(n_agents):
-            actor = GumbelActor(obs_dim=obs_dim, action_dim=action_dim, hidden_dim=hidden_dim, temperature=temperature)
-            critic = ValueCritic(obs_dim=obs_dim, action_dim=action_dim, hidden_dim=hidden_dim)
-            target_actor = GumbelActor(obs_dim=obs_dim, action_dim=action_dim, hidden_dim=hidden_dim,
-                                       temperature=temperature)
-            target_critic = ValueCritic(obs_dim=obs_dim, action_dim=action_dim, hidden_dim=hidden_dim)
-            replay_buffer = ReplayBuffer(batch_size=batch_size, buffer_capacity=buffer_capacity)
+    def __init__(self, agent_params):
+        super().__init__(agent_params=agent_params)
+        for param in agent_params:
+            actor = GumbelActor(obs_dim=param.obs_dim, action_dim=param.action_dim, hidden_dim=param.hidden_dim, temperature=param.temperature)
+            critic = ValueCritic(obs_dim=param.obs_dim, action_dim=param.action_dim, hidden_dim=param.hidden_dim)
+            target_actor = GumbelActor(obs_dim=param.obs_dim, action_dim=param.action_dim, hidden_dim=param.hidden_dim,
+                                       temperature=param.temperature)
+            target_critic = ValueCritic(obs_dim=param.obs_dim, action_dim=param.action_dim, hidden_dim=param.hidden_dim)
+            replay_buffer = ReplayBuffer(batch_size=param.batch_size, buffer_capacity=param.buffer_capacity)
             ddpg_agent = DdpgAgent(
                 actor=actor,
                 critic=critic,
                 target_actor=target_actor,
                 target_critic=target_critic,
                 replay_buffer=replay_buffer,
-                learning_rate=learning_rate,
-                gamma=gamma,
-                epsilon=epsilon,
-                K_epochs=K_epochs,
-                noise_scale=noise_scale
+                learning_rate=param.learning_rate,
+                gamma=param.gamma,
+                epsilon=param.epsilon,
+                K_epochs=param.K_epochs,
+                noise_scale=param.noise_scale
             )
             self.agents.append(ddpg_agent)
-            self.replay_buffer = ReplayBuffer(batch_size=batch_size, buffer_capacity=buffer_capacity)
+            self.replay_buffer = ReplayBuffer(batch_size=param.batch_size, buffer_capacity=param.buffer_capacity)

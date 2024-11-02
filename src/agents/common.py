@@ -12,6 +12,7 @@ class CentralParams:
 
 @dataclass
 class AgentParams:
+
     obs_dim: int
     action_dim: int
     hidden_dim: int
@@ -19,5 +20,8 @@ class AgentParams:
     gamma: float
     epsilon: float
     K_epochs: int
+    buffer_capacity: Optional[int] = None
+    batch_size: Optional[int] = None
+    temperature: Optional[float] = None
     entropy_coefficient: Optional[float] = None
-    replay_buffer: Optional[ReplayBuffer] = None
+    noise_scale: Optional[float] = None
