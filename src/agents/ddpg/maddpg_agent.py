@@ -17,9 +17,17 @@ class MaddpgAgent(IddpgAgent):
         global_obs_dim = central_params.obs_dim * len(agent_params)
         global_action_dim = central_params.action_dim * len(agent_params)
 
+        self.transformer = central_params.transformer
+
+        breakpoint()
+
+        if self.transformer is not None:
+            global_obs_dim += self.transformer.get_embed_dim()
+
         self.centralized_critic = ValueCritic(obs_dim=global_obs_dim, action_dim=global_action_dim,
                                               hidden_dim=central_params.hidden_dim)
-        self.centralized_critic_optimizer = optim.Adam(self.centralized_critic.parameters(), lr=central_params.learning_rate)
+        self.centralized_critic_optimizer = optim.Adam(self.centralized_critic.parameters(),
+                                                       lr=central_params.learning_rate)
 
         self.centralized_target_critic = ValueCritic(obs_dim=global_obs_dim, action_dim=global_action_dim,
                                                      hidden_dim=central_params.hidden_dim)
@@ -65,13 +73,14 @@ class MaddpgAgent(IddpgAgent):
     def get_predicted_q_values(self, observations, action_probs):
         cat_obs = self.cat_batch_item_to_global(observations, dim=self.obs_dim)
         cat_action_probs = self.cat_batch_item_to_global(action_probs, dim=self.action_dim)
-
         return self.centralized_critic(cat_obs, cat_action_probs)
 
     def update_centralized_critic(self, observations, next_observations, action_probs, rewards, dones):
+        if self.transformer is not None:
+            observations = torch.cat([self.transformer(observations), observations], dim=1)
+            next_observations = torch.cat([self.transformer(next_observations), observations], dim=1)
 
         predicted_q_values = self.get_predicted_q_values(observations=observations, action_probs=action_probs)
-
         next_action_probs = self.get_action_probs(obs=next_observations)
         cat_next_obs = self.cat_batch_item_to_global(next_observations, dim=self.obs_dim)
         cat_action_probs = self.cat_batch_item_to_global(next_action_probs, dim=self.action_dim)

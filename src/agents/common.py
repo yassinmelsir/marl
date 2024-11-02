@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 from typing import Optional
 from src.common.replay_buffer import ReplayBuffer
+from src.transformer.transformer_seq_2_seq import TransformerSeq2Seq
 
 
 @dataclass
@@ -11,6 +12,7 @@ class CentralParams:
     replay_buffer: Optional[ReplayBuffer] = None
     gamma: Optional[float] = None
     action_dim: Optional[float] = None
+    transformer: Optional[TransformerSeq2Seq] = None
 
 @dataclass
 class AgentParams:

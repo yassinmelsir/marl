@@ -4,7 +4,9 @@ from torch import nn
 
 
 class DqnAgent:
-    def __init__(self, q_network, target_q_network, optimizer, replay_buffer, action_dim, epsilon, gamma):
+    def __init__(self, q_network, target_q_network, optimizer, replay_buffer, action_dim, epsilon, gamma,
+                 ):
+
         self.q_network = q_network
         self.target_network = target_q_network
         self.optimizer = optimizer

@@ -4,6 +4,8 @@ import torch.nn as nn
 import torch.optim as optim
 from torch.utils.data import DataLoader, TensorDataset
 
+from src.transformer.transformer_seq_2_seq import TransformerSeq2Seq
+
 # Load your dictionary-structured dataset
 filename = "/Users/yme/Code/York/marl/src/transformer/data/transfomer_training_data.npy"
 loaded_arr = np.load(filename, allow_pickle=True)
@@ -33,21 +35,7 @@ train_dataset = TensorDataset(input_sequences, target_sequences)
 train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
 
 
-# Model Definition
-class TransformerSeq2Seq(nn.Module):
-    def __init__(self, embed_dim, num_heads, num_layers):
-        super(TransformerSeq2Seq, self).__init__()
-        self.transformer = nn.Transformer(
-            d_model=embed_dim,
-            nhead=num_heads,
-            num_encoder_layers=num_layers,
-            num_decoder_layers=num_layers
-        )
-        self.fc_out = nn.Linear(embed_dim, embed_dim)
-
-    def forward(self, src, tgt):
-        output = self.transformer(src, tgt)
-        return self.fc_out(output)
+# Model Definitio
 
 
 # Instantiate Model, Loss, and Optimizer
