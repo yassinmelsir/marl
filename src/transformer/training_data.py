@@ -1,4 +1,5 @@
 import numpy as np
+import torch
 from pettingzoo.mpe import simple_spread_v3
 
 file_name = "transfomer_training_data.npy"
@@ -19,7 +20,9 @@ for run in range(num_runs):
     for step in range(steps_per_run):
         actions = {agent: env.action_space(agent).sample() for agent in env.agents}
 
-        step_result = env.step(actions)
+        step_result = list(env.step(actions))
+        step_result[-1] = actions
+
         run_data.append(step_result)
 
         dones = [value for _, value in step_result[3].items()]
@@ -32,6 +35,22 @@ for run in range(num_runs):
 
     data.append(run_data)
 
-    print()
+    print(run_data[-2])
+    print(run_data[-1])
+
+
+def process_timestep(timestep_data):
+    observations = np.array(np.array([v for k, v in timestep_data[0].items()]).reshape(-1))
+    actions = np.array([v for k, v in timestep_data[1].items()])
+    rewards = np.array([v for k, v in timestep_data[2].items()])
+    dones = np.array([v for k, v in timestep_data[3].items()])
+    timestep = np.concatenate([observations, actions, rewards, dones, [0]])
+    return timestep
+
+for i in range(len(data)):
+    data[i] = np.array([process_timestep(timestep) for timestep in data[i]])
+
+for i in range(len(data)):
+    print(data[i].shape)
 
 np.save(file_name, data)
