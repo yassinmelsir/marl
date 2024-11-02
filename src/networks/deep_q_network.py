@@ -2,7 +2,7 @@ import torch.nn as nn
 
 
 class DeepQNetwork(nn.Module):
-    def __init__(self, obs_dim, hidden_dim, hidden_output_dim, n_actions):
+    def __init__(self, obs_dim, hidden_dim, hidden_output_dim, action_dim):
         super().__init__()
         self.mlp_bottom = nn.Sequential(
             nn.Linear(obs_dim, hidden_dim),
@@ -16,7 +16,7 @@ class DeepQNetwork(nn.Module):
         self.mlp_top = nn.Sequential(
             nn.Linear(hidden_output_dim, hidden_dim),
             nn.ReLU(),
-            nn.Linear(hidden_dim, n_actions)
+            nn.Linear(hidden_dim, action_dim)
         )
 
     def forward(self, x, hidden=None):

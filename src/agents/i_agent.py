@@ -13,7 +13,7 @@ class IAgent:
     def update(self):
         for idx, agent in enumerate(self.agents):
             agent.update()
-            if hasattr(agent, 'memory'):
+            if hasattr(agent, 'memory') and agent.memory is not None:
                 agent.memory.clear_memory()
 
     def get_batch(self):
@@ -57,14 +57,14 @@ class IAgent:
             done_tensor
         )
 
-        if hasattr(agent, 'memory'):
+        if hasattr(agent, 'memory') and agent.memory is not None:
             agent.memory.observations.append(obs_tensor)
             agent.memory.next_observations.append(next_obs_tensor)
             agent.memory.actions.append(action_tensor)
             agent.memory.action_probs.append(action_probs_tensor)
             agent.memory.rewards.append(reward_tensor)
             agent.memory.dones.append(done_tensor)
-        elif hasattr(agent, 'replay_buffer') is not None:
+        elif hasattr(agent, 'replay_buffer') and agent.replay_buffer is not None:
             agent.replay_buffer.add(experience)
         else:
             raise "Error! No memory or replay buffer!"

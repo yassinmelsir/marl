@@ -7,8 +7,8 @@ from src.networks.state_critic import StateCritic
 
 
 class IppoAgent(IAgent):
-    def __init__(self, agent_params: list[AgentParams], central_params: Optional[CentralParams]):
-        super().__init__(agent_params, central_params)
+    def __init__(self, agent_params: list[AgentParams]):
+        super().__init__(agent_params)
         self.agents = []
         for param in agent_params:
             actor = StochasticActor(obs_dim=param.obs_dim, action_dim=param.action_dim, hidden_dim=param.hidden_dim)
