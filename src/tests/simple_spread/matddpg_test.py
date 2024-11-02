@@ -40,13 +40,14 @@ if __name__ == "__main__":
         for _ in range(n_agents)
     ]
 
-    embed_dim = 64
+    seq_dim = 64
     num_heads = 8
     num_layers = 3
-    batch_size = 32
     num_epochs = 10
     learning_rate = 0.001
-    model = TransformerSeq2Seq(embed_dim, num_heads, num_layers)
+    model = TransformerSeq2Seq(seq_dim, num_heads, num_layers)
+
+    model.load_state_dict(torch.load('/Users/yme/Code/York/marl/src/transformer/weights/transformer_epoch_10.pth'))
 
     central_params = CentralParams(
         obs_dim=obs_dim,
@@ -54,7 +55,8 @@ if __name__ == "__main__":
         learning_rate=learning_rate,
         gamma=gamma,
         action_dim=action_dim,
-        transformer=model.load_state_dict(torch.load('/Users/yme/Code/York/marl/src/transformer/weights/transformer_epoch_10.pth'))
+        transformer=model,
+        batch_size=batch_size
     )
 
     agent = MaddpgAgent(agent_params=agent_params, central_params=central_params)

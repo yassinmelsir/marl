@@ -13,6 +13,7 @@ class CentralParams:
     gamma: Optional[float] = None
     action_dim: Optional[float] = None
     transformer: Optional[TransformerSeq2Seq] = None
+    batch_size: Optional[int] = None
 
 @dataclass
 class AgentParams:

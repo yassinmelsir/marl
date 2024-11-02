@@ -11,11 +11,7 @@ class TransformerSeq2Seq(nn.Module):
             num_decoder_layers=num_layers
         )
         self.fc_out = nn.Linear(embed_dim, embed_dim)
-        self.embed_dim = embed_dim
 
     def forward(self, src, tgt):
         output = self.transformer(src, tgt)
         return self.fc_out(output)
-
-    def get_embed_dim(self):
-        return self.embed_dim

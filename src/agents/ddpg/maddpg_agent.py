@@ -19,10 +19,8 @@ class MaddpgAgent(IddpgAgent):
 
         self.transformer = central_params.transformer
 
-        breakpoint()
-
         if self.transformer is not None:
-            global_obs_dim += self.transformer.get_embed_dim()
+            global_obs_dim += self.transformer.transformer.d_model
 
         self.centralized_critic = ValueCritic(obs_dim=global_obs_dim, action_dim=global_action_dim,
                                               hidden_dim=central_params.hidden_dim)
@@ -54,6 +52,7 @@ class MaddpgAgent(IddpgAgent):
         self.n_agents = len(agent_params)
         self.obs_dim = central_params.obs_dim
         self.action_dim = central_params.action_dim
+        self.start_token = torch.zeros(1, central_params.batch_size, self.transformer.transformer.d_model)
 
     def reshaped_batch_item_by_agent(self, batch, dim):
         return batch.view(batch.size(0), self.n_agents, dim)
@@ -75,10 +74,14 @@ class MaddpgAgent(IddpgAgent):
         cat_action_probs = self.cat_batch_item_to_global(action_probs, dim=self.action_dim)
         return self.centralized_critic(cat_obs, cat_action_probs)
 
+    def generate_next_sequence(self, observations):
+
+        return self.transformer(observations, self.start_token)
+
     def update_centralized_critic(self, observations, next_observations, action_probs, rewards, dones):
         if self.transformer is not None:
-            observations = torch.cat([self.transformer(observations), observations], dim=1)
-            next_observations = torch.cat([self.transformer(next_observations), observations], dim=1)
+            observations = torch.cat([self.generate_next_sequence(observations), observations], dim=1)
+            next_observations = torch.cat([self.generate_next_sequence(next_observations), observations], dim=1)
 
         predicted_q_values = self.get_predicted_q_values(observations=observations, action_probs=action_probs)
         next_action_probs = self.get_action_probs(obs=next_observations)
