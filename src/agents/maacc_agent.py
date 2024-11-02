@@ -13,7 +13,7 @@ from src.networks.stochastic_actor import StochasticActor
 class Maacc(IAgent):
     def __init__(self, agent_params, central_params):
         super().__init__(agent_params, central_params)
-        self.a2c_agents = []
+        self.agents = []
         self.memories = []
         self.centralized_critic = StateCritic(obs_dim=central_params.obs_dim, hidden_dim=central_params.hidden_dim)
         self.centralized_critic_optimizer = optim.Adam(self.centralized_critic.parameters(),
@@ -31,7 +31,7 @@ class Maacc(IAgent):
                 K_epochs=param.K_epochs,
                 entropy_coefficient=param.entropy_coefficient
             )
-            self.a2c_agents.append(agent)
+            self.agents.append(agent)
 
 
     def update_centralized_critic(self, global_observations, global_rewards):
@@ -47,7 +47,7 @@ class Maacc(IAgent):
 
     def update(self):
         global_rewards, global_observations, global_actions, global_action_probs = [], [], [], []
-        for idx, agent in enumerate(self.a2c_agents):
+        for idx, agent in enumerate(self.agents):
             if len(agent.memory.observations) == 0:
                 continue
             rewards, observations, actions, action_probs = agent.get_update_data()
@@ -73,7 +73,7 @@ class Maacc(IAgent):
 
         global_next_obs_values = self.centralized_critic(global_observations)
 
-        for idx, agent in enumerate(self.a2c_agents):
+        for idx, agent in enumerate(self.agents):
             rewards, observations, actions, action_probs = agent.get_update_data()
 
             agent.update_actor(

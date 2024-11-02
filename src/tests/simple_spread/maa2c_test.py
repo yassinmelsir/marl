@@ -47,3 +47,4 @@ if __name__ == "__main__":
     )
     maac_test = TrainingLoop(env_instance=env_instance, loop_params=loop_params, agent=agent)
     maac_test.main()
+

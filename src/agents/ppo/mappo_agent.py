@@ -7,7 +7,7 @@ from src.networks.stochastic_actor import StochasticActor
 class MappoAgent(Maacc):
     def __init__(self, agent_params, central_params):
         super().__init__(agent_params, central_params)
-        self.ppo_agents = []
+        self.agents = []
         self.memories = []
         for params in agent_params:
             actor = StochasticActor(obs_dim=params.obs_dim, action_dim=params.action_dim, hidden_dim=params.hidden_dim)
@@ -21,4 +21,4 @@ class MappoAgent(Maacc):
                 epsilon=params.epsilon,
                 K_epochs=params.K_epochs
             )
-            self.ppo_agents.append(ppo_agent)
+            self.agents.append(ppo_agent)
