@@ -10,42 +10,42 @@ from src.networks.value_critic import ValueCritic
 
 
 class MaddpgAgent(IddpgAgent):
-    def __init__(self, n_agents, obs_dim, action_dim, hidden_dim, learning_rate, gamma, epsilon, K_epochs, buffer_capacity,
-                         batch_size, noise_scale, temperature):
-        super().__init__(n_agents, obs_dim, action_dim, hidden_dim, learning_rate, gamma, epsilon, K_epochs, buffer_capacity,
-                         batch_size, noise_scale, temperature)
+    def __init__(self, agent_params, central_params):
+        super().__init__(agent_params=agent_params)
         self.agents = []
-        global_obs_dim = obs_dim * n_agents
-        global_action_dim = action_dim * n_agents
+
+        global_obs_dim = central_params.obs_dim * len(agent_params)
+        global_action_dim = central_params.action_dim * len(agent_params)
+
         self.centralized_critic = ValueCritic(obs_dim=global_obs_dim, action_dim=global_action_dim,
-                                              hidden_dim=hidden_dim)
-        self.centralized_critic_optimizer = optim.Adam(self.centralized_critic.parameters(), lr=learning_rate)
+                                              hidden_dim=central_params.hidden_dim)
+        self.centralized_critic_optimizer = optim.Adam(self.centralized_critic.parameters(), lr=central_params.learning_rate)
 
         self.centralized_target_critic = ValueCritic(obs_dim=global_obs_dim, action_dim=global_action_dim,
-                                                     hidden_dim=hidden_dim)
+                                                     hidden_dim=central_params.hidden_dim)
 
-        for _ in range(n_agents):
-            actor = GumbelActor(obs_dim=obs_dim, action_dim=action_dim, hidden_dim=hidden_dim)
-            target_actor = GumbelActor(obs_dim=obs_dim, action_dim=action_dim, hidden_dim=hidden_dim)
-            replay_buffer = ReplayBuffer(buffer_capacity=buffer_capacity, batch_size=batch_size)
+        for param in agent_params:
+            actor = GumbelActor(obs_dim=param.obs_dim, action_dim=param.action_dim, hidden_dim=param.hidden_dim)
+            target_actor = GumbelActor(obs_dim=param.obs_dim, action_dim=param.action_dim, hidden_dim=param.hidden_dim)
+            replay_buffer = ReplayBuffer(buffer_capacity=param.buffer_capacity, batch_size=param.batch_size)
             agent = DdpgAgent(
                 actor=actor,
                 critic=self.centralized_critic,
                 target_actor=target_actor,
                 target_critic=self.centralized_target_critic,
                 replay_buffer=replay_buffer,
-                learning_rate=learning_rate,
-                gamma=gamma,
-                epsilon=epsilon,
-                K_epochs=K_epochs,
-                noise_scale=noise_scale,
+                learning_rate=param.learning_rate,
+                gamma=param.gamma,
+                epsilon=param.epsilon,
+                K_epochs=param.K_epochs,
+                noise_scale=param.noise_scale,
             )
             self.agents.append(agent)
 
-        self.gamma = gamma
-        self.n_agents = n_agents
-        self.obs_dim = obs_dim
-        self.action_dim = action_dim
+        self.gamma = central_params.gamma
+        self.n_agents = len(agent_params)
+        self.obs_dim = central_params.obs_dim
+        self.action_dim = central_params.action_dim
 
     def reshaped_batch_item_by_agent(self, batch, dim):
         return batch.view(batch.size(0), self.n_agents, dim)

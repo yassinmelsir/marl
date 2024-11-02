@@ -9,6 +9,8 @@ class CentralParams:
     hidden_dim: int
     learning_rate: float
     replay_buffer: Optional[ReplayBuffer] = None
+    gamma: Optional[float] = None
+    action_dim: Optional[float] = None
 
 @dataclass
 class AgentParams:
