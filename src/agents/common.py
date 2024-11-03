@@ -9,6 +9,7 @@ class CentralParams:
     obs_dim: int
     hidden_dim: int
     learning_rate: float
+    full_length_srcs: bool = False
     replay_buffer: Optional[ReplayBuffer] = None
     gamma: Optional[float] = None
     action_dim: Optional[float] = None

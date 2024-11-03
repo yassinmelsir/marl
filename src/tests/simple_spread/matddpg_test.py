@@ -45,6 +45,7 @@ if __name__ == "__main__":
     num_layers = 3
     num_epochs = 10
     learning_rate = 0.001
+    full_length_srcs = False
     model = TransformerSeq2Seq(seq_dim, num_heads, num_layers)
 
     model.load_state_dict(torch.load('/Users/yme/Code/York/marl/src/transformer/weights/transformer_epoch_10.pth'))
@@ -56,7 +57,8 @@ if __name__ == "__main__":
         gamma=gamma,
         action_dim=action_dim,
         transformer=model,
-        batch_size=batch_size
+        batch_size=batch_size,
+        full_length_srcs=full_length_srcs
     )
 
     agent = MaddpgAgent(agent_params=agent_params, central_params=central_params)
