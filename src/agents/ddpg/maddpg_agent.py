@@ -1,12 +1,12 @@
 import torch
 from torch import optim
 import torch.nn.functional as F
-
 from src.agents.ddpg.ddpg_agent import DdpgAgent
 from src.agents.ddpg.iddpg_agent import IddpgAgent
 from src.common.replay_buffer import ReplayBuffer
 from src.networks.gumbel_actor import GumbelActor
 from src.networks.value_critic import ValueCritic
+import numpy as np
 
 
 class MaddpgAgent(IddpgAgent):
@@ -14,20 +14,29 @@ class MaddpgAgent(IddpgAgent):
         super().__init__(agent_params=agent_params)
         self.agents = []
 
-        global_obs_dim = central_params.obs_dim * len(agent_params)
-        global_action_dim = central_params.action_dim * len(agent_params)
+        self.gamma = central_params.gamma
+        self.n_agents = len(agent_params)
+        self.batch_size = central_params.batch_size
+
+        self.obs_dim = central_params.obs_dim
+        self.action_dim = central_params.action_dim
+        self.central_obs_dim = (central_params.obs_dim + self.action_dim) * self.n_agents
+
+        self.start_token = None
 
         self.transformer = central_params.transformer
+        self.t_dim = self.transformer.transformer.d_model
 
         if self.transformer is not None:
-            global_obs_dim += self.transformer.transformer.d_model
+            self.central_obs_dim += self.t_dim
+            self.start_token = torch.zeros(central_params.batch_size, 1, self.t_dim)
 
-        self.centralized_critic = ValueCritic(obs_dim=global_obs_dim, action_dim=global_action_dim,
+        self.centralized_critic = ValueCritic(obs_dim=self.central_obs_dim,
                                               hidden_dim=central_params.hidden_dim)
         self.centralized_critic_optimizer = optim.Adam(self.centralized_critic.parameters(),
                                                        lr=central_params.learning_rate)
 
-        self.centralized_target_critic = ValueCritic(obs_dim=global_obs_dim, action_dim=global_action_dim,
+        self.centralized_target_critic = ValueCritic(obs_dim=self.central_obs_dim,
                                                      hidden_dim=central_params.hidden_dim)
 
         for param in agent_params:
@@ -43,16 +52,10 @@ class MaddpgAgent(IddpgAgent):
                 learning_rate=param.learning_rate,
                 gamma=param.gamma,
                 epsilon=param.epsilon,
-                K_epochs=param.K_epochs,
                 noise_scale=param.noise_scale,
+                K_epochs=param.K_epochs
             )
             self.agents.append(agent)
-
-        self.gamma = central_params.gamma
-        self.n_agents = len(agent_params)
-        self.obs_dim = central_params.obs_dim
-        self.action_dim = central_params.action_dim
-        self.start_token = torch.zeros(1, central_params.batch_size, self.transformer.transformer.d_model)
 
     def reshaped_batch_item_by_agent(self, batch, dim):
         return batch.view(batch.size(0), self.n_agents, dim)
@@ -69,26 +72,72 @@ class MaddpgAgent(IddpgAgent):
 
         return torch.stack(action_probs)
 
-    def get_predicted_q_values(self, observations, action_probs):
+    def get_predicted_q_values(self, observations, action_probs, indices):
+
         cat_obs = self.cat_batch_item_to_global(observations, dim=self.obs_dim)
         cat_action_probs = self.cat_batch_item_to_global(action_probs, dim=self.action_dim)
-        return self.centralized_critic(cat_obs, cat_action_probs)
 
-    def generate_next_sequence(self, observations):
-
-        return self.transformer(observations, self.start_token)
-
-    def update_centralized_critic(self, observations, next_observations, action_probs, rewards, dones):
         if self.transformer is not None:
-            observations = torch.cat([self.generate_next_sequence(observations), observations], dim=1)
-            next_observations = torch.cat([self.generate_next_sequence(next_observations), observations], dim=1)
+            buffer = list(self.replay_buffer.buffer)
+            prev_timesteps = buffer[:max(indices)]
+            for i in range(len(prev_timesteps)):
+                prev_timesteps[i] = list(prev_timesteps[i])
+                for j in range(len(prev_timesteps[i])):
+                    prev_timesteps[i][j] = prev_timesteps[i][j].view(1, -1)
 
-        predicted_q_values = self.get_predicted_q_values(observations=observations, action_probs=action_probs)
+                features = [feature for index, feature in enumerate(prev_timesteps[i]) if index not in [1, 3]]
+                prev_timesteps[i] = torch.cat([torch.cat(features, dim=1), torch.zeros(1, 1)], dim=1)
+
+            prev_timesteps = torch.stack(prev_timesteps)
+            src = [prev_timesteps[:i] for i in indices]
+            trts = [self.generate_next_sequence(s) for s in src]
+
+            critic_obs = []
+
+            for i in range(cat_obs.shape[0]):
+                critic_obs.append(torch.cat((trts[i][0].view(-1), cat_obs[i], cat_action_probs[i])))
+
+            critic_obs = torch.stack(critic_obs)
+
+            breakpoint()
+
+        else:
+            critic_obs = torch.cat(cat_obs, cat_action_probs)
+
+        return self.centralized_critic(critic_obs)
+
+    def get_target_q_values(self, next_observations):
         next_action_probs = self.get_action_probs(obs=next_observations)
         cat_next_obs = self.cat_batch_item_to_global(next_observations, dim=self.obs_dim)
-        cat_action_probs = self.cat_batch_item_to_global(next_action_probs, dim=self.action_dim)
+        cat_next_action_probs = self.cat_batch_item_to_global(next_action_probs, dim=self.action_dim)
+        critic_input = torch.cat((cat_next_obs, cat_next_action_probs))
+        return self.centralized_target_critic(critic_input)
 
-        target_q_values = self.centralized_target_critic(cat_next_obs, cat_action_probs)
+    def generate_next_sequence(self, observations):
+        return self.transformer(observations, self.start_token)
+
+    def update_centralized_critic(
+            self,
+            observations,
+            next_observations,
+            action_probs,
+            rewards,
+            dones,
+            indices
+    ):
+        predicted_q_values = self.get_predicted_q_values(
+            observations=observations,
+            action_probs=action_probs,
+            indices=indices
+        )
+
+        next_action_probs = self.get_action_probs(obs=next_observations)
+        target_q_values = self.get_predicted_q_values(
+            observations=next_observations,
+            action_probs=next_action_probs,
+            indices=indices
+        )
+
         rewards = rewards.sum(dim=1, keepdim=True)
         dones = dones.float().sum(dim=1, keepdim=True)
 
@@ -110,7 +159,7 @@ class MaddpgAgent(IddpgAgent):
         if not self.replay_buffer.can_sample():
             return None
 
-        global_obs, global_next_obs, global_actions, global_action_probs, global_rewards, global_dones = self.get_batch()
+        global_obs, global_next_obs, global_actions, global_action_probs, global_rewards, global_dones, indices = self.get_batch()
 
         _ = self.update_centralized_critic(
             observations=global_obs,
@@ -118,10 +167,11 @@ class MaddpgAgent(IddpgAgent):
             action_probs=global_action_probs,
             rewards=global_rewards,
             dones=global_dones,
+            indices=indices
         )
 
         for idx, agent in enumerate(self.agents):
-            predicted_q_values = self.get_predicted_q_values(observations=global_obs, action_probs=global_action_probs)
+            predicted_q_values = self.get_predicted_q_values(observations=global_obs, action_probs=global_action_probs, indices=indices)
             actor_loss = -predicted_q_values.mean()
             agent.actor_optimizer.zero_grad()
             actor_loss.backward()

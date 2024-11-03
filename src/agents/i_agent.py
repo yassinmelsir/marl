@@ -17,7 +17,7 @@ class IAgent:
                 agent.memory.clear_memory()
 
     def get_batch(self):
-        batch = self.replay_buffer.sample()
+        batch, indices = self.replay_buffer.sample()
         observations, next_observations, actions, action_probs, rewards, dones = zip(*batch)
 
         return (
@@ -26,7 +26,8 @@ class IAgent:
             torch.stack(actions),
             torch.stack(action_probs),
             torch.stack(rewards),
-            torch.stack(dones)
+            torch.stack(dones),
+            indices
         )
 
     def get_memories(self):

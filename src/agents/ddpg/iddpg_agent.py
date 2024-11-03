@@ -10,10 +10,10 @@ class IddpgAgent(IAgent):
         super().__init__(agent_params=agent_params)
         for param in agent_params:
             actor = GumbelActor(obs_dim=param.obs_dim, action_dim=param.action_dim, hidden_dim=param.hidden_dim, temperature=param.temperature)
-            critic = ValueCritic(obs_dim=param.obs_dim, action_dim=param.action_dim, hidden_dim=param.hidden_dim)
+            critic = ValueCritic(obs_dim=param.obs_dim, hidden_dim=param.hidden_dim)
             target_actor = GumbelActor(obs_dim=param.obs_dim, action_dim=param.action_dim, hidden_dim=param.hidden_dim,
                                        temperature=param.temperature)
-            target_critic = ValueCritic(obs_dim=param.obs_dim, action_dim=param.action_dim, hidden_dim=param.hidden_dim)
+            target_critic = ValueCritic(obs_dim=param.obs_dim, hidden_dim=param.hidden_dim)
             replay_buffer = ReplayBuffer(batch_size=param.batch_size, buffer_capacity=param.buffer_capacity)
             ddpg_agent = DdpgAgent(
                 actor=actor,

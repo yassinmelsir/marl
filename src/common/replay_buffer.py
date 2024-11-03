@@ -1,5 +1,4 @@
 import random
-import torch
 from collections import deque
 
 class ReplayBuffer:
@@ -11,11 +10,14 @@ class ReplayBuffer:
         self.buffer.append(experience)
 
     def sample(self):
-        batch = random.sample(self.buffer, self.batch_size)
+        indices = random.sample(range(len(self.buffer)), self.batch_size)
+        batch = [self.buffer[i] for i in indices]
+        return batch, indices
 
-        return batch
     def size(self):
         return len(self.buffer)
 
     def can_sample(self):
         return len(self.buffer) >= self.batch_size
+
+

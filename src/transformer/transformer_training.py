@@ -51,6 +51,8 @@ for epoch in range(num_epochs):
         src, tgt = batch
         optimizer.zero_grad()
 
+        breakpoint()
+
         # Transpose to match nn.Transformer input (seq_len, batch_size, embed_dim)
         src = src.transpose(0, 1)
         tgt = tgt.transpose(0, 1)

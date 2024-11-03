@@ -51,6 +51,6 @@ for i in range(len(data)):
     data[i] = np.array([process_timestep(timestep) for timestep in data[i]])
 
 for i in range(len(data)):
-    print(data[i].shape)
+    print(data[-1])
 
 np.save(file_name, data)
