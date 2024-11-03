@@ -16,5 +16,4 @@ class ValueCritic(nn.Module):
         )
 
     def forward(self, obs):
-        breakpoint()
         return self.q_network(obs)

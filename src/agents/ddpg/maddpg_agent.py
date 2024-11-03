@@ -25,9 +25,9 @@ class MaddpgAgent(IddpgAgent):
         self.start_token = None
 
         self.transformer = central_params.transformer
-        self.t_dim = self.transformer.transformer.d_model
 
         if self.transformer is not None:
+            self.t_dim = self.transformer.transformer.d_model
             self.central_obs_dim += self.t_dim
             self.start_token = torch.zeros(central_params.batch_size, 1, self.t_dim)
 
@@ -98,11 +98,8 @@ class MaddpgAgent(IddpgAgent):
                 critic_obs.append(torch.cat((trts[i][0].view(-1), cat_obs[i], cat_action_probs[i])))
 
             critic_obs = torch.stack(critic_obs)
-
-            breakpoint()
-
         else:
-            critic_obs = torch.cat(cat_obs, cat_action_probs)
+            critic_obs = torch.cat((cat_obs, cat_action_probs), dim=1)
 
         return self.centralized_critic(critic_obs)
 
