@@ -74,61 +74,39 @@ class MaddpgAgent(IddpgAgent):
 
         return torch.stack(action_probs)
 
-    def get_obs(self, observations, actions, action_probs, rewards, dones, indices):
-        cat_obs = self.cat_batch_item_to_global(observations, dim=self.obs_dim)
-        cat_action_probs = self.cat_batch_item_to_global(action_probs, dim=self.action_dim)
+    def get_obs(self, observations, action_probs, indices):
+        obs = self.cat_batch_item_to_global(observations, dim=self.obs_dim)
+        action_probs = self.cat_batch_item_to_global(action_probs, dim=self.action_dim)
 
-        if self.full_length_srcs:
+        if self.transformer is not None:
             buffer = list(self.replay_buffer.buffer)
+            if self.full_length_srcs:
+                prev_timesteps = buffer[:max(indices)]
+            else:
+                prev_timesteps = [buffer[i] for i in indices]
 
-            prev_timesteps = buffer[:max(indices)]
             for i in range(len(prev_timesteps)):
                 prev_timesteps[i] = list(prev_timesteps[i])
                 for j in range(len(prev_timesteps[i])):
                     prev_timesteps[i][j] = prev_timesteps[i][j].view(1, -1)
 
-                features = [feature for index, feature in enumerate(prev_timesteps[i]) if index not in [1, 3]]
+                features = [feature for index, feature in enumerate(prev_timesteps[i]) if index in [0, 1]] # keep observations, actions
                 prev_timesteps[i] = torch.cat([torch.cat(features, dim=1), torch.zeros(1, 1)], dim=1)
-
-
 
             prev_timesteps = torch.stack(prev_timesteps)
             src = [prev_timesteps[:i] for i in indices]
-        else:
 
-
-        if self.transformer is not None:
-            if self.full_length_srcs:
-                src = self.get_srcs(observations, actions, action_probs, rewards, dones, indices)
-                trts = [self.generate_next_sequence(s) for s in src]
-            else:
-                breakpoint()
-                src = [torch.cat((cat_obs, actions, rewards, dones)) for i in cat_obs.shape[0]]
+            trts = [self.generate_next_sequence(s) for s in src]
 
             critic_obs = []
 
-            for i in range(cat_obs.shape[0]):
-                critic_obs.append(torch.cat((trts[i][0].view(-1), cat_obs[i], cat_action_probs[i])))
+            for i in range(obs.shape[0]):
+                critic_obs.append(torch.cat((trts[i][0].view(-1), obs[i], action_probs[i])))
 
-            critic_obs = torch.stack(critic_obs)
+            return torch.stack(critic_obs)
         else:
-            critic_obs = torch.cat((cat_obs, cat_action_probs), dim=1)
+            return torch.cat((obs, action_probs), dim=1)
 
-
-        return src
-
-    def get_predicted_q_values(self, observations, actions, action_probs, rewards, dones, indices):
-
-        critic_obs = self.get_obs(observations, actions, action_probs, rewards, dones, indices)
-
-        return self.centralized_critic(critic_obs)
-
-    def get_target_q_values(self, next_observations):
-        next_action_probs = self.get_action_probs(obs=next_observations)
-        cat_next_obs = self.cat_batch_item_to_global(next_observations, dim=self.obs_dim)
-        cat_next_action_probs = self.cat_batch_item_to_global(next_action_probs, dim=self.action_dim)
-        critic_input = torch.cat((cat_next_obs, cat_next_action_probs))
-        return self.centralized_target_critic(critic_input)
 
     def generate_next_sequence(self, observations):
         return self.transformer(observations, self.start_token)
@@ -137,24 +115,11 @@ class MaddpgAgent(IddpgAgent):
             self,
             observations,
             next_observations,
-            action_probs,
             rewards,
-            dones,
-            indices
+            dones
     ):
-        predicted_q_values = self.get_predicted_q_values(
-            observations=observations,
-            actions=actions,
-            action_probs=action_probs,
-            indices=indices
-        )
-
-        next_action_probs = self.get_action_probs(obs=next_observations)
-        target_q_values = self.get_predicted_q_values(
-            observations=next_observations,
-            action_probs=next_action_probs,
-            indices=indices
-        )
+        predicted_q_values = self.centralized_critic(observations)
+        target_q_values = self.centralized_critic(next_observations)
 
         rewards = rewards.sum(dim=1, keepdim=True)
         dones = dones.float().sum(dim=1, keepdim=True)
@@ -179,19 +144,29 @@ class MaddpgAgent(IddpgAgent):
 
         global_obs, global_next_obs, global_actions, global_action_probs, global_rewards, global_dones, indices = self.get_batch()
 
+        global_obs = self.get_obs(
+            observations=global_obs,
+            action_probs=global_action_probs,
+            indices=indices
+        )
 
+        global_next_action_probs = self.get_action_probs(obs=global_next_obs)
+        global_next_obs = self.get_obs(
+            observations=global_next_obs,
+            action_probs=global_next_action_probs,
+            indices=indices
+        )
 
         _ = self.update_centralized_critic(
             observations=global_obs,
             next_observations=global_next_obs,
-            action_probs=global_action_probs,
             rewards=global_rewards,
             dones=global_dones,
-            indices=indices
         )
 
+
         for idx, agent in enumerate(self.agents):
-            predicted_q_values = self.get_predicted_q_values(observations=global_obs, action_probs=global_action_probs, indices=indices)
+            predicted_q_values = self.centralized_critic(global_obs)
             actor_loss = -predicted_q_values.mean()
             agent.actor_optimizer.zero_grad()
             actor_loss.backward()
