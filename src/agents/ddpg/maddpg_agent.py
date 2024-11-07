@@ -90,12 +90,16 @@ class MaddpgAgent(IddpgAgent):
                 for j in range(len(prev_timesteps[i])):
                     prev_timesteps[i][j] = prev_timesteps[i][j].view(1, -1)
 
-                features = [feature for index, feature in enumerate(prev_timesteps[i]) if index in [0, 1]] # keep observations, actions
-                prev_timesteps[i] = torch.cat([torch.cat(features, dim=1), torch.zeros(1, 1)], dim=1)
+                features = []  # keep observations, actions
+
+                for index, feature in enumerate(prev_timesteps[i]):
+                    if index in [0, 2]:
+                        features.append(feature)
+
+                prev_timesteps[i] = torch.cat([torch.cat(features, dim=1), torch.zeros(1, 3)], dim=1)
 
             prev_timesteps = torch.stack(prev_timesteps)
             src = [prev_timesteps[:i] for i in indices]
-
             trts = [self.generate_next_sequence(s) for s in src]
 
             critic_obs = []
@@ -106,7 +110,6 @@ class MaddpgAgent(IddpgAgent):
             return torch.stack(critic_obs)
         else:
             return torch.cat((obs, action_probs), dim=1)
-
 
     def generate_next_sequence(self, observations):
         return self.transformer(observations, self.start_token)
@@ -129,7 +132,7 @@ class MaddpgAgent(IddpgAgent):
         critic_loss = F.mse_loss(predicted_q_values, target_q_values)
 
         self.centralized_critic_optimizer.zero_grad()
-        critic_loss.backward()
+        critic_loss.backward(retain_graph=True)
         self.centralized_critic_optimizer.step()
 
         return predicted_q_values
@@ -164,12 +167,12 @@ class MaddpgAgent(IddpgAgent):
             dones=global_dones,
         )
 
-
         for idx, agent in enumerate(self.agents):
             predicted_q_values = self.centralized_critic(global_obs)
+
             actor_loss = -predicted_q_values.mean()
             agent.actor_optimizer.zero_grad()
-            actor_loss.backward()
+            actor_loss.backward(retain_graph=True)
             agent.actor_optimizer.step()
 
         self.soft_update(self.centralized_target_critic, self.centralized_critic)

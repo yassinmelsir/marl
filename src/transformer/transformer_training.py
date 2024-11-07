@@ -23,11 +23,12 @@ for i in range(len(loaded_arr)):
 input_sequences = torch.stack(input_sequences)
 target_sequences = torch.stack(target_sequences)
 
+
 embed_dim = loaded_arr[0].shape[1]
-num_heads = 8
+num_heads = 12
 num_layers = 3
 batch_size = 32
-num_epochs = 10
+num_epochs = 30
 learning_rate = 0.001
 
 # Dataloader
@@ -50,8 +51,6 @@ for epoch in range(num_epochs):
     for batch in train_loader:
         src, tgt = batch
         optimizer.zero_grad()
-
-        breakpoint()
 
         # Transpose to match nn.Transformer input (seq_len, batch_size, embed_dim)
         src = src.transpose(0, 1)

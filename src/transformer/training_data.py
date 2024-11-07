@@ -42,9 +42,9 @@ for run in range(num_runs):
 def process_timestep(timestep_data):
     observations = np.array(np.array([v for k, v in timestep_data[0].items()]).reshape(-1))
     actions = np.array([v for k, v in timestep_data[1].items()])
-    rewards = np.array([v for k, v in timestep_data[2].items()])
-    dones = np.array([v for k, v in timestep_data[3].items()])
-    timestep = np.concatenate([observations, actions, rewards, dones, [0]])
+    # rewards = np.array([v for k, v in timestep_data[2].items()])
+    # dones = np.array([v for k, v in timestep_data[3].items()])
+    timestep = np.concatenate([observations, actions, np.zeros(3)])
     return timestep
 
 for i in range(len(data)):

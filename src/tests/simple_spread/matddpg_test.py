@@ -40,15 +40,13 @@ if __name__ == "__main__":
         for _ in range(n_agents)
     ]
 
-    seq_dim = 64
-    num_heads = 8
+    seq_dim = 60
+    num_heads = 12
     num_layers = 3
-    num_epochs = 10
-    learning_rate = 0.001
-    full_length_srcs = False
+    full_length_srcs = True
     model = TransformerSeq2Seq(seq_dim, num_heads, num_layers)
 
-    model.load_state_dict(torch.load('/Users/yme/Code/York/marl/src/transformer/weights/transformer_epoch_10.pth'))
+    model.load_state_dict(torch.load('/Users/yme/Code/York/marl/src/transformer/weights/transformer_epoch_30.pth'))
 
     central_params = CentralParams(
         obs_dim=obs_dim,
