@@ -5,7 +5,7 @@ from src.agents.ddpg.maddpg_agent import MaddpgAgent
 from src.environment.common import LoopParams
 from src.environment.simple_spread import SimpleSpreadParams, SimpleSpread
 from src.experiment.training_loop import TrainingLoop
-from src.transformer.transformer_seq_2_seq import TransformerSeq2Seq
+from src.transformer.classes.transformer_seq_2_seq import TransformerSeq2Seq
 
 if __name__ == "__main__":
     n_agents = 3

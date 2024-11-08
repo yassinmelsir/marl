@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 from typing import Optional
 from src.common.replay_buffer import ReplayBuffer
-from src.transformer.transformer_seq_2_seq import TransformerSeq2Seq
+from src.transformer.classes.transformer_seq_2_seq import TransformerSeq2Seq
 
 
 @dataclass
