@@ -4,16 +4,17 @@ import numpy as np
 import torch
 from pettingzoo.mpe import simple_spread_v3
 
-from src.environment.traffic_environment import TrafficEnvironment
+from marl.src.environment.traffic_environment import TrafficEnvironment
 
 
 class EnvData:
 
-    def __init__(self, data_filepath, num_agents, num_runs, steps_per_run, env):
+    def __init__(self, data_filepath, num_agents, num_runs, steps_per_run, env, num_heads):
         self.data_filepath = data_filepath
         self.num_agents = num_agents
         self.num_runs = num_runs
         self.steps_per_run = steps_per_run
+        self.num_heads = num_heads
 
         self.env = env
         self.raw_data = None
@@ -67,10 +68,9 @@ class EnvData:
                 else:
                     obs = np.concatenate([v for k, v in timestep_data[0].items()])
                     actions = [v for k, v in timestep_data[1].items()]
-
-                clean_data[i][j] = np.concatenate((obs, actions))
-
-        breakpoint()
+                cat_obs_len = obs.shape[0] + actions.shape[0]
+                padding = np.zeros(self.num_heads - cat_obs_len % self.num_heads)
+                clean_data[i][j] = np.concatenate((obs, actions, padding))
 
         self.clean_data = np.array(clean_data)
         return self.clean_data

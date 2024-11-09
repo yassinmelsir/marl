@@ -2,8 +2,8 @@ import numpy as np
 import torch
 from torch import nn, optim
 from torch.utils.data import TensorDataset, DataLoader
-from src.transformer.classes.env_data import EnvData
-from src.transformer.classes.transformer_seq_2_seq import TransformerSeq2Seq
+from marl.src.transformer.classes.env_data import EnvData
+from marl.src.transformer.classes.transformer_seq_2_seq import TransformerSeq2Seq
 
 
 class TrainTransformer:
@@ -34,7 +34,8 @@ class TrainTransformer:
                 num_runs=num_runs,
                 steps_per_run=steps_per_run,
                 env=env,
-                data_filepath=data_filepath
+                data_filepath=data_filepath,
+                num_heads=num_heads
             )
 
             env_data.gather_data()
@@ -48,7 +49,6 @@ class TrainTransformer:
 
         for i in range(len(self.data)):
             sequence = torch.tensor(self.data[i], dtype=torch.float32)
-            breakpoint()
             input_sequences.append(sequence[:-1])
             target_sequences.append(sequence[1:])
 
