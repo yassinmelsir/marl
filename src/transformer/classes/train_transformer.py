@@ -9,39 +9,24 @@ from marl.src.transformer.classes.transformer_seq_2_seq import TransformerSeq2Se
 class TrainTransformer:
     def __init__(
             self,
-            data_filepath,
             num_heads,
             num_layers,
             batch_size,
             learning_rate,
             output_filepath,
-            num_agents,
-            num_runs,
-            steps_per_run,
-            env,
-            gather_data
+            data=None
     ):
-        self.data_filepath = data_filepath
+        if data is None:
+            data = []
         self.num_heads = num_heads
         self.num_layers = num_layers
         self.batch_size = batch_size
         self.learning_rate = learning_rate
         self.output_filepath = output_filepath
+        self.data = data
 
-        if gather_data:
-            env_data = EnvData(
-                num_agents=num_agents,
-                num_runs=num_runs,
-                steps_per_run=steps_per_run,
-                env=env,
-                data_filepath=data_filepath,
-                num_heads=num_heads
-            )
-
-            env_data.gather_data()
-            self.data = env_data.shape_data()
-        else:
-            self.data = np.load(data_filepath, allow_pickle=True)
+    def load_data_from_file(self, data_filepath):
+        self.data = np.load(data_filepath, allow_pickle=True)
 
     def train(self, num_epochs):
         input_sequences = []
@@ -55,7 +40,7 @@ class TrainTransformer:
         input_sequences = torch.stack(input_sequences)
         target_sequences = torch.stack(target_sequences)
 
-        embed_dim = self.data[0].shape[1]
+        embed_dim = input_sequences.shape[1]
 
         train_dataset = TensorDataset(input_sequences, target_sequences)
         train_loader = DataLoader(train_dataset, batch_size=self.batch_size, shuffle=True)

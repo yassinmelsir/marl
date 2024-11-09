@@ -68,9 +68,7 @@ class EnvData:
                 else:
                     obs = np.concatenate([v for k, v in timestep_data[0].items()])
                     actions = [v for k, v in timestep_data[1].items()]
-                cat_obs_len = obs.shape[0] + actions.shape[0]
-                padding = np.zeros(self.num_heads - cat_obs_len % self.num_heads)
-                clean_data[i][j] = np.concatenate((obs, actions, padding))
+                clean_data[i][j] = np.concatenate((obs, actions))
 
         self.clean_data = np.array(clean_data)
         return self.clean_data
