@@ -4,6 +4,8 @@ import numpy as np
 import torch
 from pettingzoo.mpe import simple_spread_v3
 
+from src.environment.traffic_environment import TrafficEnvironment
+
 
 class EnvData:
 
@@ -16,6 +18,7 @@ class EnvData:
         self.env = env
         self.raw_data = None
         self.clean_data = None
+        self.traffic_env = isinstance(self.env, TrafficEnvironment)
 
     def gather_data(self):
 
@@ -30,15 +33,19 @@ class EnvData:
             for step in range(self.steps_per_run):
                 actions = {agent: self.env.action_space(agent).sample() for agent in self.env.agents}
 
-                step_result = list(self.env.step(actions))
-                step_result[-1] = actions
+                if self.traffic_env:
+                    rewards, dones, observations, actions = list(self.env.step(actions))
+                    run_data.append([observations, actions])
 
-                run_data.append(step_result)
+                else:
+                    step_result = list(self.env.step(actions))
 
-                dones = [value for _, value in step_result[3].items()]
-                rewards = [value for _, value in step_result[2].items()]
+                    run_data.append(step_result)
 
-                print(f"Run: {run}. Step: {step}. Rewards: {sum(rewards)}. Dones: {dones}")
+                    dones = [value for _, value in step_result[3].items()]
+                    rewards = [value for _, value in step_result[2].items()]
+
+                print(f"Run: {run}. Step: {step}. Rewards: {sum(rewards)}. Dones: {all(dones)}")
 
                 if all(dones):
                     break
@@ -46,7 +53,7 @@ class EnvData:
             if len(run_data) > 0:
                 data.append(run_data)
 
-        self.raw_data = np.array(data)
+        self.raw_data = data
 
 
     def shape_data(self):
@@ -54,16 +61,20 @@ class EnvData:
         for i in range(len(self.raw_data)):
             for j in range(len(self.raw_data[i])):
                 timestep_data = self.raw_data[i][j]
+                if self.traffic_env:
+                    obs = np.concatenate(timestep_data[0])
+                    actions = np.concatenate(timestep_data[1])
+                else:
+                    obs = np.concatenate([v for k, v in timestep_data[0].items()])
+                    actions = [v for k, v in timestep_data[1].items()]
 
-                observations = np.array(np.array([v for k, v in timestep_data[0].items()]).reshape(-1))
-                actions = np.array([v for k, v in timestep_data[1].items()])
-                timestep_data = np.concatenate([observations, actions, np.zeros(3)])
+                clean_data[i][j] = np.concatenate((obs, actions))
 
-                clean_data[i][j] = timestep_data
+        breakpoint()
 
         self.clean_data = np.array(clean_data)
         return self.clean_data
 
-
     def save_clean_data(self):
         np.save(self.data_filepath, self.clean_data)
+

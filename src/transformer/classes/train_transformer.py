@@ -2,7 +2,6 @@ import numpy as np
 import torch
 from torch import nn, optim
 from torch.utils.data import TensorDataset, DataLoader
-
 from src.transformer.classes.env_data import EnvData
 from src.transformer.classes.transformer_seq_2_seq import TransformerSeq2Seq
 
@@ -43,13 +42,13 @@ class TrainTransformer:
         else:
             self.data = np.load(data_filepath, allow_pickle=True)
 
-
     def train(self, num_epochs):
         input_sequences = []
         target_sequences = []
 
         for i in range(len(self.data)):
             sequence = torch.tensor(self.data[i], dtype=torch.float32)
+            breakpoint()
             input_sequences.append(sequence[:-1])
             target_sequences.append(sequence[1:])
 
@@ -64,7 +63,6 @@ class TrainTransformer:
         criterion = nn.MSELoss()
         optimizer = optim.Adam(model.parameters(), lr=self.learning_rate)
 
-        # Training Loop
         for epoch in range(num_epochs):
             model.train()
             total_loss = 0
@@ -72,18 +70,14 @@ class TrainTransformer:
                 src, tgt = batch
                 optimizer.zero_grad()
 
-                # Transpose to match nn.Transformer input (seq_len, batch_size, embed_dim)
                 src = src.transpose(0, 1)
                 tgt = tgt.transpose(0, 1)
 
-                # Forward pass
-                output = model(src, tgt[:-1])  # Use all but last tgt token as input
+                output = model(src, tgt[:-1])
 
-                # Calculate loss
-                loss = criterion(output, tgt[1:])  # Predict next token
+                loss = criterion(output, tgt[1:])
                 loss.backward()
 
-                # Update weights
                 optimizer.step()
                 total_loss += loss.item()
 
