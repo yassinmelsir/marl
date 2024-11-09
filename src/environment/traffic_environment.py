@@ -13,9 +13,9 @@ class TrafficEnvironmentParams:
 
 
 class TrafficEnvironment:
-    def __init__(self, params: TrafficEnvironmentParams):
-        self.gui = params.gui
-        self.sumo_cmd = params.sumo_cmd.split()
+    def __init__(self, gui, sumo_cmd):
+        self.gui = gui
+        self.sumo_cmd = sumo_cmd.split()
         self.simulation_running = False
         self.traci = traci
 
@@ -125,7 +125,15 @@ class TrafficEnvironment:
     def get_traci_traffic_light_reward(self, tl_id):
         queue_lengths = [self.traci.lane.getLastStepVehicleNumber(lane_id) for lane_id in
                          self.traci.trafficlight.getControlledLanes(tl_id)]
-        reward = -sum(queue_lengths)
+        queue_length_penalty = -sum(queue_lengths)
+
+        emissions = [self.traci.vehicle.getCO2Emission(veh_id) for veh_id in self.traci.vehicle.getIDList()]
+        emissions_penalty = -sum(emissions)
+
+        delays = [self.traci.vehicle.getWaitingTime(veh_id) for veh_id in self.traci.vehicle.getIDList()]
+        delay_penalty = -sum(delays)
+
+        reward = queue_length_penalty + emissions_penalty + delay_penalty
         return reward
 
     def check_traci_traffic_light_done(self, tl_id):
